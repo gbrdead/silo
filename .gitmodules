@@ -1,0 +1,6 @@
+[submodule "c++/ext/atomic_queue"]
+	path = c++/ext/atomic_queue
+	url = https://github.com/max0x7ba/atomic_queue.git
+[submodule "c++/ext/concurrentqueue"]
+	path = c++/ext/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git
