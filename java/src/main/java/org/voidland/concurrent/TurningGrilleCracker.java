@@ -80,7 +80,7 @@ public abstract class TurningGrilleCracker
     
     protected abstract void doBruteForce();
     
-    protected String milestone(long elapsedTimeNs)
+    protected String milestone(long grillesPerSecond)
     {
         return "";
     }
@@ -119,37 +119,43 @@ public abstract class TurningGrilleCracker
             
             if (this.milestoneReportInProgress.compareAndSet(false, true))
             {
-                long elapsedTimeNs = milestoneEnd - this.milestoneStart;
-                long grilleCountForMilestone = grilleCountSoFar - this.grilleCountAtMilestoneStart;
+                long milestoneStart = this.milestoneStart;
+                long grilleCountAtMilestoneStart = this.grilleCountAtMilestoneStart;
                 
-                long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
-    
-                if (grillesPerSecond > this.bestGrillesPerSecond)
+                if (milestoneEnd > milestoneStart  &&  grilleCountSoFar > grilleCountAtMilestoneStart)
                 {
-                    this.bestGrillesPerSecond = grillesPerSecond;
-                }
-    
-                String milestoneStatus = this.milestone(elapsedTimeNs);
-                
-                if (Silo.VERBOSE)
-                {
-                    float done = grilleCountSoFar * 100.0f / this.grilleCount;
+                    long elapsedTimeNs = milestoneEnd - milestoneStart;
+                    long grilleCountForMilestone = grilleCountSoFar - grilleCountAtMilestoneStart;
+                    
+                    long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
         
-                    System.err.print(String.format("%.1f", done) + "% done; ");
-                    System.err.print("current speed: " + grillesPerSecond + " grilles/s; ");
-                    System.err.print("best speed so far: " + this.bestGrillesPerSecond + " grilles/s");
-                    if (milestoneStatus.length() > 0)
+                    if (grillesPerSecond > this.bestGrillesPerSecond)
                     {
-                        System.err.print("; " + milestoneStatus);
+                        this.bestGrillesPerSecond = grillesPerSecond;
                     }
-                    System.err.println();
+        
+                    String milestoneStatus = this.milestone(grillesPerSecond);
+                    
+                    if (Silo.VERBOSE)
+                    {
+                        float done = grilleCountSoFar * 100.0f / this.grilleCount;
+            
+                        System.err.print(String.format("%.1f", done) + "% done; ");
+                        System.err.print("current speed: " + grillesPerSecond + " grilles/s; ");
+                        System.err.print("best speed so far: " + this.bestGrillesPerSecond + " grilles/s");
+                        if (milestoneStatus.length() > 0)
+                        {
+                            System.err.print("; " + milestoneStatus);
+                        }
+                        System.err.println();
+                    }
+                    
+                    this.milestoneStart = milestoneEnd;
+                    this.grilleCountAtMilestoneStart = grilleCountSoFar;
                 }
                 
                 this.milestoneReportInProgress.set(false);
             }
-
-            this.milestoneStart = milestoneEnd;
-            this.grilleCountAtMilestoneStart = grilleCountSoFar;
         }
     }
     

@@ -22,9 +22,9 @@ public class TurningGrilleCrackerProducerConsumer
     private AtomicBoolean shutdownOneConsumer;
     private int improving;
     private boolean addingThreads;
-    long prevElapsedTime;
+    long prevGrillesPerSecond;
     int bestConsumerCount;
-    long bestElapsedTime;
+    long bestGrillesPerSecond;
 
     
     public TurningGrilleCrackerProducerConsumer(String cipherText, int initialConsumerCount, int producerCount, MPMC_PortionQueue<Grille> portionQueue)
@@ -37,8 +37,8 @@ public class TurningGrilleCrackerProducerConsumer
         this.portionQueue = portionQueue;
         this.shutdownOneConsumer = new AtomicBoolean(false);
         this.addingThreads = true;
-        this.prevElapsedTime = Long.MAX_VALUE;
-        this.bestElapsedTime = this.prevElapsedTime;
+        this.prevGrillesPerSecond = 0;
+        this.bestGrillesPerSecond = this.prevGrillesPerSecond;
         this.bestConsumerCount = 0;
         this.producerThreads = new ArrayList<>(this.producerCount);
         this.consumerThreads = new ConcurrentLinkedQueue<>();
@@ -75,23 +75,23 @@ public class TurningGrilleCrackerProducerConsumer
     }
     
     @Override
-    protected String milestone(long elapsedTime)
+    protected String milestone(long grillesPerSecond)
     {
         int queueSize = this.portionQueue.getSize();
 
-        if (elapsedTime < this.bestElapsedTime)
+        if (grillesPerSecond > this.bestGrillesPerSecond)
         {
-            this.bestElapsedTime = elapsedTime;
+            this.bestGrillesPerSecond = grillesPerSecond;
             this.bestConsumerCount = this.consumerCount.get();
         }
 
         if (this.grilleCountSoFar.get() < this.grilleCount)
         {
-            if (elapsedTime > this.prevElapsedTime)
+            if (grillesPerSecond < this.prevGrillesPerSecond)
             {
                 this.improving--;
             }
-            else if (elapsedTime < this.prevElapsedTime)
+            else if (grillesPerSecond > this.prevGrillesPerSecond)
             {
                 this.improving++;
             }
@@ -114,7 +114,7 @@ public class TurningGrilleCrackerProducerConsumer
                 }
             }
     
-            this.prevElapsedTime = elapsedTime;
+            this.prevGrillesPerSecond = grillesPerSecond;
         }
 
         if (Silo.VERBOSE)

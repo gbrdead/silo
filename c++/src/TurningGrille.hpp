@@ -86,7 +86,7 @@ public:
 
 protected:
     virtual void doBruteForce() = 0;
-    virtual std::string milestone(std::chrono::high_resolution_clock::duration elapsedTime);
+    virtual std::string milestone(uint64_t grillesPerSecond);
     virtual std::string milestonesSummary();
 
     void applyGrille(const Grille& grill);
@@ -111,16 +111,16 @@ private:
     std::atomic<bool> shutdownOneConsumer;
     int improving;
     bool addingThreads;
-    std::chrono::high_resolution_clock::duration prevElapsedTime;
+    uint64_t prevGrillesPerSecond;
     unsigned bestConsumerCount;
-    std::chrono::high_resolution_clock::duration bestElapsedTime;
+    uint64_t bestGrillesPerSecond;
 
 public:
     TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned consumerCount, unsigned producerCount, MPMC_PortionQueue<Grille>& portionQueue);
 
 protected:
     void doBruteForce();
-    std::string milestone(std::chrono::high_resolution_clock::duration elapsedTime);
+    std::string milestone(uint64_t grillesPerSecond);
     std::string milestonesSummary();
 
 private:

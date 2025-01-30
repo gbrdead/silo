@@ -271,7 +271,7 @@ void TurningGrilleCracker::bruteForce()
     }
 }
 
-std::string TurningGrilleCracker::milestone(std::chrono::high_resolution_clock::duration elapsedTime)
+std::string TurningGrilleCracker::milestone(uint64_t grillesPerSecond)
 {
     return "";
 }
@@ -312,38 +312,44 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
         bool expectedMilestoneInProgress = false;
         if (this->milestoneReportInProgress.compare_exchange_strong(expectedMilestoneInProgress, true))
         {
-            std::chrono::high_resolution_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
-            uint64_t grilleCountForMilestone = grilleCountSoFar - this->grilleCountAtMilestoneStart;
+            std::chrono::high_resolution_clock::time_point milestoneStart = this->milestoneStart;
+            uint64_t grilleCountAtMilestoneStart = this->grilleCountAtMilestoneStart;
 
-            std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
-            uint64_t grillsPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
-
-            if (grillsPerSecond > this->bestGrillesPerSecond)
+            if (milestoneEnd > milestoneStart  &&  grilleCountSoFar > grilleCountAtMilestoneStart)
             {
-                this->bestGrillesPerSecond = grillsPerSecond;
-            }
+                std::chrono::high_resolution_clock::duration elapsedTime = milestoneEnd - milestoneStart;
+                uint64_t grilleCountForMilestone = grilleCountSoFar - grilleCountAtMilestoneStart;
 
-            std::string milestoneStatus = this->milestone(elapsedTime);
+                std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
+                uint64_t grillesPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
 
-            if (org::voidland::concurrent::VERBOSE)
-            {
-                float done = grilleCountSoFar * 100.0 / this->grilleCount;
-
-                std::cerr << std::fixed << std::setprecision(1) << done << "% done; ";
-                std::cerr << "current speed: " << grillsPerSecond << " grilles/s; ";
-                std::cerr << "best speed so far: " << this->bestGrillesPerSecond << " grilles/s";
-                if (milestoneStatus.length() > 0)
+                if (grillesPerSecond > this->bestGrillesPerSecond)
                 {
-                    std::cerr << "; " << milestoneStatus;
+                    this->bestGrillesPerSecond = grillesPerSecond;
                 }
-                std::cerr << std::endl;
+
+                std::string milestoneStatus = this->milestone(grillesPerSecond);
+
+                if (org::voidland::concurrent::VERBOSE)
+                {
+                    float done = grilleCountSoFar * 100.0 / this->grilleCount;
+
+                    std::cerr << std::fixed << std::setprecision(1) << done << "% done; ";
+                    std::cerr << "current speed: " << grillesPerSecond << " grilles/s; ";
+                    std::cerr << "best speed so far: " << this->bestGrillesPerSecond << " grilles/s";
+                    if (milestoneStatus.length() > 0)
+                    {
+                        std::cerr << "; " << milestoneStatus;
+                    }
+                    std::cerr << std::endl;
+                }
+
+                this->milestoneStart = milestoneEnd;
+                this->grilleCountAtMilestoneStart = grilleCountSoFar;
             }
 
             this->milestoneReportInProgress = false;
         }
-
-        this->milestoneStart = milestoneEnd;
-        this->grilleCountAtMilestoneStart = grilleCountSoFar;
     }
 }
 
@@ -369,8 +375,8 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const
     portionQueue(portionQueue),
     shutdownOneConsumer(false),
     addingThreads(true),
-    prevElapsedTime(std::chrono::high_resolution_clock::duration::max()),
-    bestElapsedTime(prevElapsedTime),
+    prevGrillesPerSecond(0),
+    bestGrillesPerSecond(prevGrillesPerSecond),
     bestConsumerCount(0),
     improving(0)
 {
@@ -397,7 +403,7 @@ void TurningGrilleCrackerProducerConsumer::doBruteForce()
     }
 }
 
-std::string TurningGrilleCrackerProducerConsumer::milestone(std::chrono::high_resolution_clock::duration elapsedTime)
+std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerSecond)
 {
     // Locking a mutex and notifying a condition variable are time-expensive but the thread is blocked for most of this time.
     // In order to utilize the CPUs fully we need more consumers than the count of CPUs.
@@ -405,19 +411,19 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(std::chrono::high_re
 
     std::size_t queueSize = this->portionQueue.getSize();
 
-    if (elapsedTime < this->bestElapsedTime)
+    if (grillesPerSecond > this->bestGrillesPerSecond)
     {
-        this->bestElapsedTime = elapsedTime;
+        this->bestGrillesPerSecond = grillesPerSecond;
         this->bestConsumerCount = this->consumerCount;
     }
 
     if (this->grilleCountSoFar < this->grilleCount)
     {
-        if (elapsedTime > this->prevElapsedTime)
+        if (grillesPerSecond < this->prevGrillesPerSecond)
         {
             this->improving--;
         }
-        else if (elapsedTime < this->prevElapsedTime)
+        else if (grillesPerSecond > this->prevGrillesPerSecond)
         {
             this->improving++;
         }
@@ -440,7 +446,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(std::chrono::high_re
             }
         }
 
-        this->prevElapsedTime = elapsedTime;
+        this->prevGrillesPerSecond = grillesPerSecond;
     }
 
     if (org::voidland::concurrent::VERBOSE)
