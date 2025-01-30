@@ -3,7 +3,7 @@ AM_INIT_AUTOMAKE([foreign no-dist])
 AC_CONFIG_HEADERS([config.h])
 
 
-AX_CXX_COMPILE_STDCXX([20], [noext], [mandatory])
+AX_CXX_COMPILE_STDCXX([17], [noext], [mandatory])
 
 AX_PTHREAD
 if test "x${ax_pthread_ok}" = "xyes"

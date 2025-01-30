@@ -5,7 +5,7 @@
 
 #include <queue>
 #include <mutex>
-#include <semaphore>
+#include <condition_variable>
 #include <utility>
 #include <thread>
 #include <oneapi/tbb/concurrent_queue.h>
@@ -23,9 +23,11 @@ private:
     std::size_t maxSize;
     std::queue<E> queue;
 
+    // Not using counting_semaphore because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928 .
     std::mutex mutex;
-    std::counting_semaphore<> fullSemaphore;
-    std::counting_semaphore<> emptySemaphore;
+    std::condition_variable fullCondition;
+    std::condition_variable emptyCondition;
+    bool workDone;
 
 public:
     TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
@@ -43,8 +45,7 @@ public:
 template <class E>
 TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
-    fullSemaphore(0),
-    emptySemaphore(maxSize)
+    workDone(false)
 {
 }
 
@@ -58,33 +59,37 @@ void TextbookPortionQueue<E>::addPortion(const E& portion)
 template <class E>
 void TextbookPortionQueue<E>::addPortion(E&& portion)
 {
-    this->emptySemaphore.acquire();
+    std::unique_lock lock(this->mutex);
+
+    while (this->queue.size() >= this->maxSize)
     {
-        std::unique_lock lock(this->mutex);
-        this->queue.push(std::move(portion));
+        this->emptyCondition.wait(lock);
     }
-    this->fullSemaphore.release();
+
+    this->queue.push(std::move(portion));
+
+    this->fullCondition.notify_one();
 }
 
 template <class E>
 std::optional<E> TextbookPortionQueue<E>::retrievePortion()
 {
-    this->fullSemaphore.acquire();
+    std::unique_lock lock(this->mutex);
 
-    E portion;
+    while (this->queue.empty())
     {
-        std::unique_lock lock(this->mutex);
-
-        if (this->queue.empty())
+        if (this->workDone)
         {
             return std::nullopt;
         }
 
-        portion = std::move(this->queue.front());
-        this->queue.pop();
+        this->fullCondition.wait(lock);
     }
 
-    this->emptySemaphore.release();
+    E portion = std::move(this->queue.front());
+    this->queue.pop();
+
+    this->emptyCondition.notify_one();
 
     return portion;
 }
@@ -92,22 +97,29 @@ std::optional<E> TextbookPortionQueue<E>::retrievePortion()
 template <class E>
 void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
-    for (std::size_t i = 0; i < this->maxSize; i++)
+    std::unique_lock lock(this->mutex);
+
+    while (!this->queue.empty())
     {
-        this->emptySemaphore.acquire();
+        this->emptyCondition.wait(lock);
     }
 }
 
 template <class E>
 void TextbookPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 {
-    this->fullSemaphore.release(consumerCount);
+    std::unique_lock lock(this->mutex);
+
+    this->workDone = true;
+
+    this->fullCondition.notify_all();
 }
 
 template <class E>
 std::size_t TextbookPortionQueue<E>::getSize()
 {
     std::unique_lock lock(this->mutex);
+
     return this->queue.size();
 }
 
