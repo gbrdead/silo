@@ -19,7 +19,7 @@ public class TurningGrilleCrackerWithPerfectParallelism
     {
         int cpuCount = Runtime.getRuntime().availableProcessors();
         
-        List<Thread> workerThreads = this.startEorkerThreads(cpuCount);
+        List<Thread> workerThreads = this.startWorkerThreads(cpuCount);
         
         try
         {
@@ -34,7 +34,7 @@ public class TurningGrilleCrackerWithPerfectParallelism
         }
     }
 
-    private List<Thread> startEorkerThreads(int workerCount)
+    private List<Thread> startWorkerThreads(int workerCount)
     {
         List<Thread> workerThreads = new ArrayList<>(workerCount);
         

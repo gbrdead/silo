@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-abstract public class NonBlockingPortionQueue<E>
+abstract public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
     protected int maxSize;
@@ -16,7 +16,7 @@ abstract public class NonBlockingPortionQueue<E>
     private Object notEmptyCondition = new Object();
     
     
-    public NonBlockingPortionQueue(int initialConsumerCount, int producerCount)
+    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount)
     {
         this.maxSize = initialConsumerCount * producerCount * 1000;
         this.size = new AtomicInteger(0);

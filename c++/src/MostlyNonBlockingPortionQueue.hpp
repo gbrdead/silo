@@ -1,5 +1,5 @@
-#ifndef __VOIDLAND_NON_BLOCKING_WORK_QUEUE_HPP__
-#define __VOIDLAND_NON_BLOCKING_WORK_QUEUE_HPP__
+#ifndef __VOIDLAND_MOSTLY_NON_BLOCKING_WORK_QUEUE_HPP__
+#define __VOIDLAND_MOSTLY_NON_BLOCKING_WORK_QUEUE_HPP__
 
 #include "MPMC_PortionQueue.hpp"
 
@@ -18,7 +18,7 @@ namespace org::voidland::concurrent
 
 
 template <class E>
-class NonBlockingPortionQueue :
+class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
 {
 protected:
@@ -36,7 +36,7 @@ private:
     std::condition_variable notEmptyCondition;
 
 public:
-    NonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
+    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -53,7 +53,7 @@ protected:
 
 
 template <class E>
-NonBlockingPortionQueue<E>::NonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
+MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
     size(0),
     workDone(false)
@@ -61,14 +61,14 @@ NonBlockingPortionQueue<E>::NonBlockingPortionQueue(std::size_t initialConsumerC
 }
 
 template <class E>
-void NonBlockingPortionQueue<E>::addPortion(const E& portion)
+void MostlyNonBlockingPortionQueue<E>::addPortion(const E& portion)
 {
     E portionCopy(portion);
     this->addPortion(std::move(portionCopy));
 }
 
 template <class E>
-void NonBlockingPortionQueue<E>::addPortion(E&& portion)
+void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
 {
     std::size_t newSize = ++this->size;
 
@@ -93,7 +93,7 @@ void NonBlockingPortionQueue<E>::addPortion(E&& portion)
 }
 
 template <class E>
-std::optional<E> NonBlockingPortionQueue<E>::retrievePortion()
+std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
 {
     E portion;
 
@@ -126,7 +126,7 @@ std::optional<E> NonBlockingPortionQueue<E>::retrievePortion()
 }
 
 template <class E>
-void NonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
+void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
     {
         std::lock_guard lock(this->emptyMutex);
@@ -143,7 +143,7 @@ void NonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
 }
 
 template <class E>
-void NonBlockingPortionQueue<E>::stopConsumers(std::size_t consumerCount)
+void MostlyNonBlockingPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 {
     this->workDone = true;
     {
@@ -153,13 +153,13 @@ void NonBlockingPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 }
 
 template <class E>
-std::size_t NonBlockingPortionQueue<E>::getSize()
+std::size_t MostlyNonBlockingPortionQueue<E>::getSize()
 {
     return this->size;
 }
 
 template <class E>
-std::size_t NonBlockingPortionQueue<E>::getMaxSize()
+std::size_t MostlyNonBlockingPortionQueue<E>::getMaxSize()
 {
     return this->maxSize;
 }
@@ -168,7 +168,7 @@ std::size_t NonBlockingPortionQueue<E>::getMaxSize()
 
 template <class E>
 class ConcurrentPortionQueue :
-    public NonBlockingPortionQueue<E>
+    public MostlyNonBlockingPortionQueue<E>
 {
 private:
     moodycamel::ConcurrentQueue<E> queue;
@@ -183,7 +183,7 @@ protected:
 
 template <class E>
 ConcurrentPortionQueue<E>::ConcurrentPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    NonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
+    MostlyNonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
     queue(this->maxSize + producerCount, 0, producerCount)
 {
 }
@@ -204,7 +204,7 @@ bool ConcurrentPortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class AtomicPortionQueue :
-    public NonBlockingPortionQueue<E>
+    public MostlyNonBlockingPortionQueue<E>
 {
 private:
     atomic_queue::AtomicQueueB2<E> queue;
@@ -219,7 +219,7 @@ protected:
 
 template <class E>
 AtomicPortionQueue<E>::AtomicPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    NonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
+    MostlyNonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
     queue(this->maxSize + producerCount)
 {
 }
@@ -241,7 +241,7 @@ bool AtomicPortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class LockfreePortionQueue :
-    public NonBlockingPortionQueue<E>
+    public MostlyNonBlockingPortionQueue<E>
 {
 private:
     boost::lockfree::queue<E*> queue;
@@ -257,7 +257,7 @@ protected:
 
 template <class E>
 LockfreePortionQueue<E>::LockfreePortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    NonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
+    MostlyNonBlockingPortionQueue<E>(initialConsumerCount, producerCount),
     queue(this->maxSize + producerCount)
 {
 }
@@ -302,7 +302,7 @@ bool LockfreePortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class OneTBB_PortionQueue :
-    public NonBlockingPortionQueue<E>
+    public MostlyNonBlockingPortionQueue<E>
 {
 private:
     oneapi::tbb::concurrent_queue<E> queue;
@@ -317,7 +317,7 @@ protected:
 
 template <class E>
 OneTBB_PortionQueue<E>::OneTBB_PortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    NonBlockingPortionQueue<E>(initialConsumerCount, producerCount)
+    MostlyNonBlockingPortionQueue<E>(initialConsumerCount, producerCount)
 {
 }
 

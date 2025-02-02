@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 public class ConcurrentPortionQueue<E> 
-	extends NonBlockingPortionQueue<E>
+	extends MostlyNonBlockingPortionQueue<E>
 {
 	private ConcurrentLinkedQueue<E> queue;
 	
