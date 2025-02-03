@@ -26,7 +26,7 @@ public class TextbookPortionQueue<E>
 		this.maxSize = initialConsumerCount * producerCount * 1000;
 		this.queue = new ArrayDeque<>(this.maxSize);
 		
-		this.mutex = new ReentrantLock(true);
+		this.mutex = new ReentrantLock(false);
 		this.fullCondition = this.mutex.newCondition();
 		this.emptyCondition = this.mutex.newCondition();
 		this.workDone = false;
