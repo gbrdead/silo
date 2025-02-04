@@ -79,7 +79,7 @@ public class Silo
             {
                 case "concurrent":
                 {
-                    int initialConsumerCount = cpuCount;
+                    int initialConsumerCount = cpuCount * 2;
                     int producerCount = cpuCount;
                     
                     MPMC_PortionQueue<Grille> portionQueue = new ConcurrentPortionQueue<Grille>(initialConsumerCount, producerCount);
@@ -88,7 +88,7 @@ public class Silo
                 }
                 case "blocking":
                 {
-                    int initialConsumerCount = cpuCount;
+                    int initialConsumerCount = cpuCount * 6;
                     int producerCount = cpuCount;
                     
                     MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(initialConsumerCount, producerCount);
@@ -97,7 +97,7 @@ public class Silo
                 }
                 case "textbook":
                 {
-                    int initialConsumerCount = cpuCount;
+                    int initialConsumerCount = cpuCount * 5;
                     int producerCount = cpuCount;
                     
                     MPMC_PortionQueue<Grille> portionQueue = new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount);
