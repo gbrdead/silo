@@ -172,6 +172,7 @@ uint64_t Grille::getOrdinal() const
 GrilleInterval::GrilleInterval(unsigned halfSideLength, uint64_t begin, uint64_t end) :
     next(halfSideLength, begin),
     preincremented(true),
+	begin(begin),
     nextOrdinal(begin),
     end(end)
 {
@@ -213,6 +214,11 @@ const Grille* GrilleInterval::getNext()
 
     this->nextOrdinal++;
     return &this->next;
+}
+
+float GrilleInterval::calculateCompletion() const
+{
+	return (this->nextOrdinal - this->begin) * 100.0f / (this->end - this->begin);
 }
 
 
@@ -532,32 +538,31 @@ void TurningGrilleCrackerWithPerfectParallelism::doBruteForce()
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
 
-    std::list<std::thread> workerThreads = this->startWorkerThreads(cpuCount);
+    this->startWorkerThreads(cpuCount);
 
-    for (std::thread& workerThread : workerThreads)
+    for (std::thread& workerThread : this->workerThreads)
     {
         workerThread.join();
     }
 }
 
-std::list<std::thread> TurningGrilleCrackerWithPerfectParallelism::startWorkerThreads(unsigned workerCount)
+void TurningGrilleCrackerWithPerfectParallelism::startWorkerThreads(unsigned workerCount)
 {
-    std::list<std::thread> workerThreads;
-
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::llround((long double)this->grilleCount / workerCount);
     for (unsigned i = 0; i < workerCount; i++)
     {
-        workerThreads.push_back(std::thread
-            {
-                [this, nextIntervalBegin, i, workerCount, intervalLength]
-                {
-                    GrilleInterval grilleInterval(this->sideLength / 2, nextIntervalBegin,
-                        (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
+    	this->grilleIntervals.emplace_back(this->sideLength / 2, nextIntervalBegin,
+            (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
+    	GrilleInterval* grilleInterval = &this->grilleIntervals.back();
 
+        this->workerThreads.push_back(std::thread
+            {
+                [this, grilleInterval]
+                {
                     this->workersCount++;
                     const Grille* grille;
-                    while ((grille = grilleInterval.getNext()))
+                    while ((grille = grilleInterval->getNext()))
                     {
                         this->applyGrille(*grille);
                     }
@@ -567,8 +572,6 @@ std::list<std::thread> TurningGrilleCrackerWithPerfectParallelism::startWorkerTh
 
         nextIntervalBegin += intervalLength;
     }
-
-    return workerThreads;
 }
 
 std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grillesPerSecond)
@@ -576,7 +579,21 @@ std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grill
     if (org::voidland::concurrent::VERBOSE)
     {
         std::ostringstream s;
-        s << "worker threads: " << this->workersCount;
+        s << "worker threads: " << this->workersCount << "; completion per thread: ";
+
+        std::list<GrilleInterval>::const_iterator i = this->grilleIntervals.begin();
+        while (i != this->grilleIntervals.end())
+        {
+        	const GrilleInterval& grilleInterval = *i;
+        	s << std::fixed << std::setprecision(1) << grilleInterval.calculateCompletion();
+        	i++;
+        	if (i != this->grilleIntervals.end())
+        	{
+        		s << " / ";
+        	}
+        }
+        s << "% done";
+
         return s.str();
     }
     return "";

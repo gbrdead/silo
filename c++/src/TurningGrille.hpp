@@ -45,6 +45,7 @@ class GrilleInterval
 private:
     Grille next;
     bool preincremented;
+    uint64_t begin;
     uint64_t nextOrdinal;
     uint64_t end;
 
@@ -53,6 +54,8 @@ public:
 
     std::optional<Grille> cloneNext();
     const Grille* getNext();
+
+    float calculateCompletion() const;
 };
 
 
@@ -135,6 +138,8 @@ class TurningGrilleCrackerWithPerfectParallelism :
 {
 private:
 	std::atomic<unsigned> workersCount;
+	std::list<std::thread> workerThreads;
+	std::list<GrilleInterval> grilleIntervals;
 
 public:
     TurningGrilleCrackerWithPerfectParallelism(const std::string& cipherText);
@@ -144,7 +149,7 @@ protected:
     std::string milestone(uint64_t grillesPerSecond);
 
 private:
-    std::list<std::thread> startWorkerThreads(unsigned workerCount);
+    void startWorkerThreads(unsigned workerCount);
 };
 
 }
