@@ -133,11 +133,15 @@ private:
 class TurningGrilleCrackerWithPerfectParallelism :
     public TurningGrilleCracker
 {
+private:
+	std::atomic<unsigned> workersCount;
+
 public:
     TurningGrilleCrackerWithPerfectParallelism(const std::string& cipherText);
 
 protected:
     void doBruteForce();
+    std::string milestone(uint64_t grillesPerSecond);
 
 private:
     std::list<std::thread> startWorkerThreads(unsigned workerCount);

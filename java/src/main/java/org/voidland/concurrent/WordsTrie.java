@@ -28,7 +28,7 @@ public class WordsTrie
             String word;
             while ((word = wordsReader.readLine()) != null)
             {
-                word = word.trim().toUpperCase(Locale.ENGLISH).replaceAll("[^A-Z]", "");
+                word = word.toUpperCase(Locale.ENGLISH).replaceAll("[^A-Z]", "");
                 if (word.length() >= 3)	// Short words significantly increase the count of false positives.
                 {
                 	this.addWord(this.root, word, 0);

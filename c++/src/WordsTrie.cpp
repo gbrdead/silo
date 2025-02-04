@@ -53,7 +53,6 @@ void WordsTrie::loadWords(const std::string& wordsFilePath)
     for (std::string word; std::getline(wordsStream, word); )
     {
         boost::to_upper(word);
-        boost::trim(word);
 
         const static boost::regex nonLettersRe("[^A-Z]");
         boost::erase_all_regex(word, nonLettersRe);

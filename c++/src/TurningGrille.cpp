@@ -523,7 +523,8 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
 
 
 TurningGrilleCrackerWithPerfectParallelism::TurningGrilleCrackerWithPerfectParallelism(const std::string& cipherText) :
-    TurningGrilleCracker(cipherText)
+    TurningGrilleCracker(cipherText),
+	workersCount(0)
 {
 }
 
@@ -554,11 +555,13 @@ std::list<std::thread> TurningGrilleCrackerWithPerfectParallelism::startWorkerTh
                     GrilleInterval grilleInterval(this->sideLength / 2, nextIntervalBegin,
                         (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
 
+                    this->workersCount++;
                     const Grille* grille;
                     while ((grille = grilleInterval.getNext()))
                     {
                         this->applyGrille(*grille);
                     }
+                    this->workersCount--;
                 }
             });
 
@@ -566,6 +569,17 @@ std::list<std::thread> TurningGrilleCrackerWithPerfectParallelism::startWorkerTh
     }
 
     return workerThreads;
+}
+
+std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grillesPerSecond)
+{
+    if (org::voidland::concurrent::VERBOSE)
+    {
+        std::ostringstream s;
+        s << "worker threads: " << this->workersCount;
+        return s.str();
+    }
+    return "";
 }
 
 }

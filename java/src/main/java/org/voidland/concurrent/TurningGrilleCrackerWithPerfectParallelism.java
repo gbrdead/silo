@@ -3,15 +3,20 @@ package org.voidland.concurrent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class TurningGrilleCrackerWithPerfectParallelism
         extends TurningGrilleCracker
 {
+	private AtomicInteger workersCount;
+	
+	
     public TurningGrilleCrackerWithPerfectParallelism(String cipherText)
         throws IOException
     {
         super(cipherText);
+        this.workersCount = new AtomicInteger(0);
     }
 
     @Override
@@ -47,11 +52,13 @@ public class TurningGrilleCrackerWithPerfectParallelism
             
             Thread producerThread = new Thread(() ->
             {
+            	this.workersCount.incrementAndGet();
                 Grille grille;
                 while ((grille = grilleInterval.getNext()) != null)
                 {
                     applyGrille(grille);
                 }
+                this.workersCount.decrementAndGet();
             });
             workerThreads.add(producerThread);
             producerThread.start();
@@ -60,5 +67,15 @@ public class TurningGrilleCrackerWithPerfectParallelism
         }
         
         return workerThreads;
+    }
+    
+    @Override
+    protected String milestone(long grillesPerSecond)
+    {
+        if (Silo.VERBOSE)
+        {
+            return "worker threads: " + this.workersCount.get();
+        }
+        return "";
     }
 }
