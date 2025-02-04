@@ -589,7 +589,7 @@ std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grill
         	i++;
         	if (i != this->grilleIntervals.end())
         	{
-        		s << " / ";
+        		s << "/";
         	}
         }
         s << "% done";

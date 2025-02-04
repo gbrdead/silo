@@ -9,8 +9,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class TurningGrilleCracker
 {
-    private static final String WORDS_FILE_PATH = "The_Oxford_3000.txt";
-    private static final int MIN_DETECTED_WORD_COUNT = 16;	// Determined by gut feeling.
+    private static final String WORDS_FILE_PATH = "3000words.txt";
+    private static final int MIN_DETECTED_WORD_COUNT = 17;	// Determined by gut feeling.
     
 
     protected int sideLength;

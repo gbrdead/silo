@@ -62,8 +62,8 @@ public:
 class TurningGrilleCracker
 {
 private:
-    inline static const std::string WORDS_FILE_PATH = "The_Oxford_3000.txt";
-    inline static const unsigned MIN_DETECTED_WORD_COUNT = 16;  // Determined by gut feeling.
+    inline static const std::string WORDS_FILE_PATH = "3000words.txt";
+    inline static const unsigned MIN_DETECTED_WORD_COUNT = 17;  // Determined by gut feeling.
 
 protected:
     unsigned sideLength;

@@ -90,7 +90,7 @@ public class TurningGrilleCrackerWithPerfectParallelism
             	status.append(String.format("%.1f", grilleInterval.calculateCompletion()));
             	if (i.hasNext())
             	{
-            		status.append(" / ");
+            		status.append("/");
             	}
             }
             status.append("% done");
