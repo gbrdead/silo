@@ -1,4 +1,4 @@
-package org.voidland.concurrent;
+package org.voidland.concurrent.queue;
 
 import java.util.Collection;
 import java.util.concurrent.ArrayBlockingQueue;

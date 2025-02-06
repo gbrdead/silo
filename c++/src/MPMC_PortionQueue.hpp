@@ -5,7 +5,7 @@
 #include <optional>
 
 
-namespace org::voidland::concurrent
+namespace org::voidland::concurrent::queue
 {
 
 

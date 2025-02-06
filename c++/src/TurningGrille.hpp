@@ -10,10 +10,13 @@
 #include <list>
 #include <thread>
 #include <vector>
+#include <memory>
 #include "concurrentqueue/concurrentqueue.h"
 
+using namespace org::voidland::concurrent;
 
-namespace org::voidland::concurrent
+
+namespace org::voidland::concurrent::turning_grille
 {
 
 class Grille
@@ -35,8 +38,6 @@ public:
     Grille& operator++();
 
     bool isHole(unsigned x, unsigned y, unsigned rotation) const;
-
-    uint64_t getOrdinal() const;
 };
 
 
@@ -105,7 +106,7 @@ class TurningGrilleCrackerProducerConsumer :
 private:
     unsigned initialConsumerCount;
     unsigned producerCount;
-    MPMC_PortionQueue<Grille>& portionQueue;
+    std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue;
 
     std::atomic<unsigned> consumerCount;
     moodycamel::ConcurrentQueue<std::thread> consumerThreads;
@@ -119,7 +120,7 @@ private:
     uint64_t bestGrillesPerSecond;
 
 public:
-    TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned consumerCount, unsigned producerCount, MPMC_PortionQueue<Grille>& portionQueue);
+    TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned consumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue);
 
 protected:
     void doBruteForce();

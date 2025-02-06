@@ -1,13 +1,15 @@
-package org.voidland.concurrent;
+package org.voidland.concurrent.queue;
 
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-abstract public class MostlyNonBlockingPortionQueue<E>
+public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
-    protected int maxSize;
+	private UnboundedNonBlockingQueue<E> unboundedQueue;
+	
+    private int maxSize;
     private AtomicInteger size;
     private boolean workDone;
     
@@ -16,11 +18,14 @@ abstract public class MostlyNonBlockingPortionQueue<E>
     private Object notEmptyCondition = new Object();
     
     
-    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount)
+    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, UnboundedNonBlockingQueue<E> unboundedQueue)
     {
+    	this.unboundedQueue = unboundedQueue;
         this.maxSize = initialConsumerCount * producerCount * 1000;
         this.size = new AtomicInteger(0);
         this.workDone = false;
+        
+        this.unboundedQueue.setSizeParameters(producerCount, this.maxSize);
     }
     
     @Override
@@ -43,7 +48,7 @@ abstract public class MostlyNonBlockingPortionQueue<E>
                     }
                 }
             }
-            while (!this.tryEnqueue(portion));
+            while (!this.unboundedQueue.tryEnqueue(portion));
     
             if (newSize == this.maxSize * 1 / 4)
             {
@@ -66,11 +71,11 @@ abstract public class MostlyNonBlockingPortionQueue<E>
         {
             E portion;
     
-            if ((portion = this.tryDequeue()) == null)
+            if ((portion = this.unboundedQueue.tryDequeue()) == null)
             {
                 synchronized (this.emptyCondition)
                 {
-                    while ((portion = this.tryDequeue()) == null)
+                    while ((portion = this.unboundedQueue.tryDequeue()) == null)
                     {
                         if (this.workDone)
                         {
@@ -150,7 +155,4 @@ abstract public class MostlyNonBlockingPortionQueue<E>
     {
         return this.maxSize;
     }
-    
-    abstract protected boolean tryEnqueue(E work);
-    abstract protected E tryDequeue();
 }

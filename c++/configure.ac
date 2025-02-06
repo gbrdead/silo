@@ -26,7 +26,7 @@ AX_BOOST_BASE([1.56],
     ])
 
 AX_BOOST_REGEX
-if test "x$ax_cv_boost_regex" = "xyes"
+if test "x${ax_cv_boost_regex}" = "xyes"
 then
     LIBS="${BOOST_REGEX_LIB} ${LIBS}"
 else
@@ -34,7 +34,7 @@ else
 fi 
 
 AX_BOOST_CHRONO
-if test "x$ax_cv_boost_chrono" = "xyes"
+if test "x${ax_cv_boost_chrono}" = "xyes"
 then
     LIBS="${BOOST_CHRONO_LIB} ${LIBS}"
 else

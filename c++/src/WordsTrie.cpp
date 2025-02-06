@@ -7,7 +7,7 @@
 #include <boost/algorithm/string/regex.hpp>
 
 
-namespace org::voidland::concurrent
+namespace org::voidland::concurrent::turning_grille
 {
 
 class TrieNode

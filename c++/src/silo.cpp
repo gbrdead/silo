@@ -1,7 +1,6 @@
 #include "BlockingPortionQueue.hpp"
 #include "MostlyNonBlockingPortionQueue.hpp"
 #include "TurningGrille.hpp"
-using namespace org::voidland::concurrent;
 
 #include <fstream>
 #include <string>
@@ -11,6 +10,8 @@ using namespace org::voidland::concurrent;
 #include <chrono>
 #include <boost/algorithm/string.hpp>
 #include <boost/core/demangle.hpp>
+
+using namespace org::voidland::concurrent;
 
 
 inline static const std::string CIPHER_TEXT_PATH = "encrypted_msg.txt";
@@ -69,8 +70,7 @@ int main(int argc, char *argv[])
             arg = "perfect";
         }
 
-        std::unique_ptr<TurningGrilleCracker> cracker;
-        std::unique_ptr<MPMC_PortionQueue<Grille>> portionQueue;
+        std::unique_ptr<turning_grille::TurningGrilleCracker> cracker;
         
         unsigned cpuCount = std::thread::hardware_concurrency();
         if (arg == "concurrent")
@@ -78,52 +78,56 @@ int main(int argc, char *argv[])
             unsigned initialConsumerCount = cpuCount * 1.5;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new ConcurrentPortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
+            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::ConcurrentPortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "atomic")
         {
             unsigned initialConsumerCount = cpuCount * 2;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new AtomicPortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
+            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::AtomicPortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "lockfree")
         {
             unsigned initialConsumerCount = cpuCount * 2.5;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new LockfreePortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
+            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::LockfreePortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "textbook")
         {
             unsigned initialConsumerCount = cpuCount * 4;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::TextbookPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount))));
         }
         else if (arg == "onetbb")
         {
             unsigned initialConsumerCount = cpuCount * 1;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new OneTBB_PortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
+            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::OneTBB_PortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "onetbb_bounded")
         {
             unsigned initialConsumerCount = cpuCount * 1;
             unsigned producerCount = cpuCount;
 
-            portionQueue.reset(new OneTBB_BoundedPortionQueue<Grille>(initialConsumerCount, producerCount));
-            cracker.reset(new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, *portionQueue));
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::OneTBB_BoundedPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount))));
         }
         else if (arg == "perfect")
         {
-            cracker.reset(new TurningGrilleCrackerWithPerfectParallelism(cipherText));
+            cracker.reset(new turning_grille::TurningGrilleCrackerWithPerfectParallelism(cipherText));
         }
         else
         {

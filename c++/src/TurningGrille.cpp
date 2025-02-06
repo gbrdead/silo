@@ -13,7 +13,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 
-namespace org::voidland::concurrent
+namespace org::voidland::concurrent::turning_grille
 {
 
 bool VERBOSE = (std::getenv("VERBOSE") != nullptr) ? boost::iequals("true", std::getenv("VERBOSE")) : false;
@@ -29,7 +29,7 @@ Grille::Grille(unsigned halfSideLength, uint64_t ordinal) :
     halfSideLength(halfSideLength),
     holes(halfSideLength * halfSideLength, 0)
 {
-    for (std::vector<uint8_t>::iterator i = this->holes.begin(); (ordinal != 0) && (i != this->holes.end()); i++)
+    for (std::vector<uint8_t>::iterator i = this->holes.begin(); (ordinal != 0) && (i != this->holes.end()); ++i)
     {
         *i = (ordinal & 0b11);
         ordinal >>= 2;
@@ -72,14 +72,14 @@ Grille& Grille::operator=(Grille&& other)
 
 Grille& Grille::operator++()
 {
-    for (unsigned i = 0; i < this->holes.size(); i++)
+	for (uint8_t& hole : this->holes)
     {
-        if (this->holes[i] < 3)
+        if (hole < 3)
         {
-            this->holes[i]++;
+        	hole++;
             break;
         }
-        this->holes[i] = 0;
+        hole = 0;
     }
 
     return *this;
@@ -89,7 +89,7 @@ bool Grille::isHole(unsigned x, unsigned y, unsigned rotation) const
 {
     unsigned sideLength = this->halfSideLength * 2;
 
-    int origX, origY;
+    unsigned origX, origY;
     switch (rotation)
     {
         case 0:
@@ -156,16 +156,6 @@ bool Grille::isHole(unsigned x, unsigned y, unsigned rotation) const
     }
 
     return this->holes[holeX * this->halfSideLength + holeY] == quadrant;
-}
-
-uint64_t Grille::getOrdinal() const
-{
-    uint64_t ordinal = 0;
-    for (unsigned i = 0; i < this->halfSideLength * this->halfSideLength; i++)
-    {
-        ordinal |= (this->holes[i] << i*2);
-    }
-    return ordinal;
 }
 
 
@@ -336,7 +326,7 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
 
                 std::string milestoneStatus = this->milestone(grillesPerSecond);
 
-                if (org::voidland::concurrent::VERBOSE)
+                if (org::voidland::concurrent::turning_grille::VERBOSE)
                 {
                     float done = grilleCountSoFar * 100.0 / this->grilleCount;
 
@@ -364,7 +354,7 @@ void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
     unsigned wordsFound = this->wordsTrie.countWords(candidate);
     if (wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT)
     {
-        if (org::voidland::concurrent::VERBOSE)
+        if (org::voidland::concurrent::turning_grille::VERBOSE)
         {
             std::cout << (std::to_string(wordsFound) + ": " + candidate + '\n');
         }
@@ -373,12 +363,12 @@ void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
 
 
 
-TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned initialConsumerCount, unsigned producerCount, MPMC_PortionQueue<Grille>& portionQueue) :
+TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned initialConsumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue) :
     TurningGrilleCracker(cipherText),
     initialConsumerCount(initialConsumerCount),
     producerCount(producerCount),
     consumerCount(0),
-    portionQueue(portionQueue),
+    portionQueue(std::move(portionQueue)),
     shutdownOneConsumer(false),
     addingThreads(true),
     prevGrillesPerSecond(0),
@@ -398,9 +388,9 @@ void TurningGrilleCrackerProducerConsumer::doBruteForce()
         producerThread.join();
     }
 
-    this->portionQueue.ensureAllPortionsAreRetrieved();
+    this->portionQueue->ensureAllPortionsAreRetrieved();
     while (this->grilleCountSoFar < this->grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
-    this->portionQueue.stopConsumers(this->consumerCount);
+    this->portionQueue->stopConsumers(this->consumerCount);
 
     std::thread consumerThread;
     while (this->consumerThreads.try_dequeue(consumerThread))
@@ -415,7 +405,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
     // In order to utilize the CPUs fully we need more consumers than the count of CPUs.
     // Here we continuously try to find the best consumer count for the current conditions.
 
-    std::size_t queueSize = this->portionQueue.getSize();
+    std::size_t queueSize = this->portionQueue->getSize();
 
     if (grillesPerSecond > this->bestGrillesPerSecond)
     {
@@ -455,10 +445,10 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
         this->prevGrillesPerSecond = grillesPerSecond;
     }
 
-    if (org::voidland::concurrent::VERBOSE)
+    if (org::voidland::concurrent::turning_grille::VERBOSE)
     {
         std::ostringstream s;
-        s << "consumer threads: " << this->consumerCount << "; queue size: " << queueSize << " / " << this->portionQueue.getMaxSize();
+        s << "consumer threads: " << this->consumerCount << "; queue size: " << queueSize << " / " << this->portionQueue->getMaxSize();
         return s.str();
     }
     return "";
@@ -487,7 +477,7 @@ void TurningGrilleCrackerProducerConsumer::startProducerThreads()
                     std::optional<Grille> grill;
                     while ((grill = grilleInterval.cloneNext()))
                     {
-                        this->portionQueue.addPortion(std::move(*grill));
+                        this->portionQueue->addPortion(std::move(*grill));
                     }
                 }
             });
@@ -512,7 +502,7 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
             [this]
             {
                 std::optional<Grille> grille;
-                while ((grille = this->portionQueue.retrievePortion()).has_value())
+                while ((grille = this->portionQueue->retrievePortion()).has_value())
                 {
                     this->applyGrille(*grille);
                     bool shutdown = this->shutdownOneConsumer.exchange(false);
@@ -576,7 +566,7 @@ void TurningGrilleCrackerWithPerfectParallelism::startWorkerThreads(unsigned wor
 
 std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grillesPerSecond)
 {
-    if (org::voidland::concurrent::VERBOSE)
+    if (org::voidland::concurrent::turning_grille::VERBOSE)
     {
         std::ostringstream s;
         s << "worker threads: " << this->workersCount << "; completion per thread: ";

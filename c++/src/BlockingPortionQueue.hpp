@@ -11,7 +11,7 @@
 #include <oneapi/tbb/concurrent_queue.h>
 
 
-namespace org::voidland::concurrent
+namespace org::voidland::concurrent::queue
 {
 
 

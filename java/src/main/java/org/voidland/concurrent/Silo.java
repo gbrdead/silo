@@ -7,6 +7,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import org.voidland.concurrent.queue.BlockingPortionQueue;
+import org.voidland.concurrent.queue.ConcurrentNonBlockingQueue;
+import org.voidland.concurrent.queue.MostlyNonBlockingPortionQueue;
+import org.voidland.concurrent.queue.TextbookPortionQueue;
+import org.voidland.concurrent.turning_grille.Grille;
+import org.voidland.concurrent.turning_grille.TurningGrilleCracker;
+import org.voidland.concurrent.turning_grille.TurningGrilleCrackerProducerConsumer;
+import org.voidland.concurrent.turning_grille.TurningGrilleCrackerWithPerfectParallelism;
+
 
 public class Silo
 {
@@ -82,8 +91,8 @@ public class Silo
                     int initialConsumerCount = cpuCount * 2;
                     int producerCount = cpuCount;
                     
-                    MPMC_PortionQueue<Grille> portionQueue = new ConcurrentPortionQueue<Grille>(initialConsumerCount, producerCount);
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, portionQueue);
+                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+                    		new MostlyNonBlockingPortionQueue<Grille>(initialConsumerCount, producerCount, new ConcurrentNonBlockingQueue<Grille>()));
                     break;
                 }
                 case "blocking":
@@ -91,8 +100,8 @@ public class Silo
                     int initialConsumerCount = cpuCount * 6;
                     int producerCount = cpuCount;
                     
-                    MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(initialConsumerCount, producerCount);
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, portionQueue);
+                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+                    		new BlockingPortionQueue<Grille>(initialConsumerCount, producerCount));
                     break;
                 }
                 case "textbook":
@@ -100,8 +109,8 @@ public class Silo
                     int initialConsumerCount = cpuCount * 5;
                     int producerCount = cpuCount;
                     
-                    MPMC_PortionQueue<Grille> portionQueue = new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount);
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount, portionQueue);
+                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+                    		new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount));
                     break;
                 }
                 case "perfect":

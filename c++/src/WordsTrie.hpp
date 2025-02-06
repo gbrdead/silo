@@ -6,7 +6,7 @@
 #include <vector>
 
 
-namespace org::voidland::concurrent
+namespace org::voidland::concurrent::turning_grille
 {
 
 class TrieNode;
