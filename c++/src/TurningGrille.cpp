@@ -518,13 +518,13 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
 
 
 
-TurningGrilleCrackerWithPerfectParallelism::TurningGrilleCrackerWithPerfectParallelism(const std::string& cipherText) :
+TurningGrilleCrackerSyncless::TurningGrilleCrackerSyncless(const std::string& cipherText) :
     TurningGrilleCracker(cipherText),
 	workersCount(0)
 {
 }
 
-void TurningGrilleCrackerWithPerfectParallelism::doBruteForce()
+void TurningGrilleCrackerSyncless::doBruteForce()
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
 
@@ -536,7 +536,7 @@ void TurningGrilleCrackerWithPerfectParallelism::doBruteForce()
     }
 }
 
-void TurningGrilleCrackerWithPerfectParallelism::startWorkerThreads(unsigned workerCount)
+void TurningGrilleCrackerSyncless::startWorkerThreads(unsigned workerCount)
 {
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::llround((long double)this->grilleCount / workerCount);
@@ -564,7 +564,7 @@ void TurningGrilleCrackerWithPerfectParallelism::startWorkerThreads(unsigned wor
     }
 }
 
-std::string TurningGrilleCrackerWithPerfectParallelism::milestone(uint64_t grillesPerSecond)
+std::string TurningGrilleCrackerSyncless::milestone(uint64_t grillesPerSecond)
 {
     if (org::voidland::concurrent::turning_grille::VERBOSE)
     {

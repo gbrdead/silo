@@ -14,7 +14,7 @@ import org.voidland.concurrent.queue.TextbookPortionQueue;
 import org.voidland.concurrent.turning_grille.Grille;
 import org.voidland.concurrent.turning_grille.TurningGrilleCracker;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerProducerConsumer;
-import org.voidland.concurrent.turning_grille.TurningGrilleCrackerWithPerfectParallelism;
+import org.voidland.concurrent.turning_grille.TurningGrilleCrackerSyncless;
 
 
 public class Silo
@@ -78,7 +78,7 @@ public class Silo
             }
             else
             {
-                arg = "perfect";
+                arg = "syncless";
             }
 
             TurningGrilleCracker cracker;
@@ -113,9 +113,9 @@ public class Silo
                     		new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount));
                     break;
                 }
-                case "perfect":
+                case "syncless":
                 {
-                    cracker = new TurningGrilleCrackerWithPerfectParallelism(cipherText);
+                    cracker = new TurningGrilleCrackerSyncless(cipherText);
                     break;
                 }
                 default:

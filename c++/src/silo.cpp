@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            arg = "perfect";
+            arg = "syncless";
         }
 
         std::unique_ptr<turning_grille::TurningGrilleCracker> cracker;
@@ -125,9 +125,9 @@ int main(int argc, char *argv[])
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::OneTBB_BoundedPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount))));
         }
-        else if (arg == "perfect")
+        else if (arg == "syncless")
         {
-            cracker.reset(new turning_grille::TurningGrilleCrackerWithPerfectParallelism(cipherText));
+            cracker.reset(new turning_grille::TurningGrilleCrackerSyncless(cipherText));
         }
         else
         {

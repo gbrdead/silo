@@ -134,7 +134,7 @@ private:
 };
 
 
-class TurningGrilleCrackerWithPerfectParallelism :
+class TurningGrilleCrackerSyncless :
     public TurningGrilleCracker
 {
 private:
@@ -143,7 +143,7 @@ private:
 	std::list<GrilleInterval> grilleIntervals;
 
 public:
-    TurningGrilleCrackerWithPerfectParallelism(const std::string& cipherText);
+    TurningGrilleCrackerSyncless(const std::string& cipherText);
 
 protected:
     void doBruteForce();

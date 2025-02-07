@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.voidland.concurrent.Silo;
 
 
-public class TurningGrilleCrackerWithPerfectParallelism
+public class TurningGrilleCrackerSyncless
         extends TurningGrilleCracker
 {
 	private AtomicInteger workersCount;
@@ -17,7 +17,7 @@ public class TurningGrilleCrackerWithPerfectParallelism
 	private List<GrilleInterval> grilleIntervals;
 	
 	
-    public TurningGrilleCrackerWithPerfectParallelism(String cipherText)
+    public TurningGrilleCrackerSyncless(String cipherText)
         throws IOException
     {
         super(cipherText);
