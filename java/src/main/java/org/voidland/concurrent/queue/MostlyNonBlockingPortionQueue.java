@@ -25,7 +25,7 @@ public class MostlyNonBlockingPortionQueue<E>
         this.size = new AtomicInteger(0);
         this.workDone = false;
         
-        this.unboundedQueue.setSizeParameters(producerCount, this.maxSize);
+        this.unboundedQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
     
     @Override

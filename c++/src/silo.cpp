@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         unsigned cpuCount = std::thread::hardware_concurrency();
         if (arg == "concurrent")
         {
-            unsigned initialConsumerCount = cpuCount * 1.5;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         }
         else if (arg == "atomic")
         {
-            unsigned initialConsumerCount = cpuCount * 2;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
@@ -93,16 +93,24 @@ int main(int argc, char *argv[])
         }
         else if (arg == "lockfree")
         {
-            unsigned initialConsumerCount = cpuCount * 2.5;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
             				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::LockfreePortionQueue<turning_grille::Grille>())))));
         }
+        else if (arg == "sync_bounded")
+        {
+            unsigned initialConsumerCount = cpuCount * 6;
+            unsigned producerCount = cpuCount;
+
+            cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
+            		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::SyncBoundedPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount))));
+        }
         else if (arg == "textbook")
         {
-            unsigned initialConsumerCount = cpuCount * 4;
+            unsigned initialConsumerCount = cpuCount * 6;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,

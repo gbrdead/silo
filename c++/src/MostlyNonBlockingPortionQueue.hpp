@@ -52,7 +52,7 @@ MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t init
     size(0),
     workDone(false)
 {
-	this->unboundedQueue->setSizeParameters(producerCount, this->maxSize);
+	this->unboundedQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
 }
 
 template <class E>

@@ -20,7 +20,7 @@ class UnboundedNonBlockingQueue
 public:
 	virtual ~UnboundedNonBlockingQueue();
 
-	virtual void setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize);
+	virtual void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
 	virtual bool tryEnqueue(E&& portion) = 0;
 	virtual bool tryDequeue(E& portion) = 0;
@@ -32,7 +32,7 @@ UnboundedNonBlockingQueue<E>::~UnboundedNonBlockingQueue()
 }
 
 template <class E>
-void UnboundedNonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize)
+void UnboundedNonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
 }
 
@@ -48,7 +48,7 @@ private:
 public:
     ConcurrentPortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize);
+    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -60,9 +60,9 @@ ConcurrentPortionQueue<E>::ConcurrentPortionQueue()
 }
 
 template <class E>
-void ConcurrentPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize)
+void ConcurrentPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new moodycamel::ConcurrentQueue<E>(desiredMaxSize + producerCount, 0, producerCount));
+	this->queue.reset(new moodycamel::ConcurrentQueue<E>(maxSize, 0, producerCount));
 }
 
 template <class E>
@@ -89,7 +89,7 @@ private:
 public:
     AtomicPortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize);
+    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -101,9 +101,9 @@ AtomicPortionQueue<E>::AtomicPortionQueue()
 }
 
 template <class E>
-void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize)
+void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new atomic_queue::AtomicQueueB2<E>(desiredMaxSize + producerCount));
+	this->queue.reset(new atomic_queue::AtomicQueueB2<E>(maxSize));
 }
 
 template <class E>
@@ -132,7 +132,7 @@ public:
     LockfreePortionQueue();
     ~LockfreePortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize);
+    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -154,9 +154,9 @@ LockfreePortionQueue<E>::~LockfreePortionQueue()
 }
 
 template <class E>
-void LockfreePortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t desiredMaxSize)
+void LockfreePortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new boost::lockfree::queue<E*>(desiredMaxSize + producerCount));
+	this->queue.reset(new boost::lockfree::queue<E*>(maxSize));
 }
 
 template <class E>

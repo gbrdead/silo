@@ -41,6 +41,14 @@ else
     AC_MSG_ERROR([boost::chrono is required])
 fi
 
+AX_BOOST_THREAD
+if test "x${ax_cv_boost_thread}" = "xyes"
+then
+    LIBS="${BOOST_THREAD_LIB} ${LIBS}"
+else
+    AC_MSG_ERROR([boost::thread is required])
+fi
+
 
 AC_LANG_PUSH([C++])
 
