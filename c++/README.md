@@ -1,4 +1,4 @@
-# Silo C++ reference test
+# Silo C++ multi-threading performance test
 
 ## Build
 
@@ -31,14 +31,38 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 ## Running the reference test
 
-`silo` must be run from the top directory of the silo project. There is only one command-line parameter:
+`silo` must be run from the top directory of the silo project. There is only one command-line parameter, specifying the implementation type:
 
-| Parameter value | Queue implementation | Non-blocking |
-|---|---|---|
-| concurrent | [moodycamel::ConcurrentQueue](https://github.com/cameron314/concurrentqueue) | mostly |
-| atomic | [atomic_queue](https://max0x7ba.github.io/atomic_queue/) | mostly |
-| lockfree | [Boost lockfree queue](https://www.boost.org/doc/libs/release/doc/html/lockfree.html) | mostly |
-| textbook | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no |
-| onetbb | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly |
-| onetbb_bounded | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | no |
-| perfect | queueless, with no synchronization overhead | yes |
+| Implementation | Queue type | Non-blocking | Suffers from scheduler unfairness |
+|---|---|---|---|
+| syncless | queueless, with no synchronization overhead | yes | yes |
+| atomic | [atomic_queue](https://max0x7ba.github.io/atomic_queue/) | mostly | no |
+| concurrent | [moodycamel::ConcurrentQueue](https://github.com/cameron314/concurrentqueue) | mostly | no |
+| lockfree | [Boost lockfree queue](https://www.boost.org/doc/libs/release/doc/html/lockfree.html) | mostly | no |
+| textbook | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | no |
+| onetbb | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly (?) | no |
+| onetbb_bounded | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | mostly (?) | no |
+
+## Test results
+
+| Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|
+| syncless | 839 | 1397 | 3582 |
+| concurrent |  | 1263 | 3017 |
+| atomic |  | 1257 | 3002 |
+| lockfree |  | 1195 | 2803 |
+| textbook | 657 | 1032 | 1487 |
+| onetbb |  |  | 1432 |
+| onetbb_bounded |  |  | 1409 |
+
+General results:
+- `concurrent` and `atomic` have almost the same performance and can be considered as co-winners among the queues.
+
+Some remarks: 
+- The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done. As a result, the CPUs are not fully utilized for just a small amount of time and the average speed is not significantly affected.
+- At first glance, `oneapi::tbb::concurrent_bounded_queue` should work like `org::voidland::concurrent::MostlyNonBlockingPortionQueue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low for this to be true.
+- The average speed of the oneTBB queues is unexplainably low. Also, their performance is erratic - the speed varies wildly (no other implementation behaves in this way).
+- `boost::sync_bounded_queue` is not tested because it is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a dead lock.
+
+## TODO
+Measure the performance with Clang. The tests so far have been performed with GCC.
