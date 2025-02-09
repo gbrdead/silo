@@ -97,7 +97,7 @@ public class Silo
                 }
                 case "blocking":
                 {
-                    int initialConsumerCount = cpuCount * 6;
+                    int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     
                     cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
@@ -106,7 +106,7 @@ public class Silo
                 }
                 case "textbook":
                 {
-                    int initialConsumerCount = cpuCount * 6;
+                    int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     
                     cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,

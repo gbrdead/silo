@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 
 public class ConcurrentNonBlockingQueue<E> 
-	implements UnboundedNonBlockingQueue<E>
+	implements NonBlockingQueue<E>
 {
 	private ConcurrentLinkedQueue<E> queue;
 	

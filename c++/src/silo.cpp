@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
-            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::ConcurrentPortionQueue<turning_grille::Grille>())))));
+            				std::unique_ptr<queue::NonBlockingQueue<turning_grille::Grille>>(new queue::ConcurrentPortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "atomic")
         {
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
-            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::AtomicPortionQueue<turning_grille::Grille>())))));
+            				std::unique_ptr<queue::NonBlockingQueue<turning_grille::Grille>>(new queue::AtomicPortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "lockfree")
         {
@@ -98,11 +98,11 @@ int main(int argc, char *argv[])
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
-            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::LockfreePortionQueue<turning_grille::Grille>())))));
+            				std::unique_ptr<queue::NonBlockingQueue<turning_grille::Grille>>(new queue::LockfreePortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "sync_bounded")
         {
-            unsigned initialConsumerCount = cpuCount * 6;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
         }
         else if (arg == "textbook")
         {
-            unsigned initialConsumerCount = cpuCount * 6;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
@@ -118,16 +118,16 @@ int main(int argc, char *argv[])
         }
         else if (arg == "onetbb")
         {
-            unsigned initialConsumerCount = cpuCount * 1;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
             		std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>>(new queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>(initialConsumerCount, producerCount,
-            				std::unique_ptr<queue::UnboundedNonBlockingQueue<turning_grille::Grille>>(new queue::OneTBB_PortionQueue<turning_grille::Grille>())))));
+            				std::unique_ptr<queue::NonBlockingQueue<turning_grille::Grille>>(new queue::OneTBB_PortionQueue<turning_grille::Grille>())))));
         }
         else if (arg == "onetbb_bounded")
         {
-            unsigned initialConsumerCount = cpuCount * 1;
+            unsigned initialConsumerCount = cpuCount * 3;
             unsigned producerCount = cpuCount;
 
             cracker.reset(new turning_grille::TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,

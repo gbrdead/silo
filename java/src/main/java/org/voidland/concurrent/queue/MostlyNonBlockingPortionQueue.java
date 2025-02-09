@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
-	private UnboundedNonBlockingQueue<E> unboundedQueue;
+	private NonBlockingQueue<E> nonBlockingQueue;
 	
     private int maxSize;
     private AtomicInteger size;
@@ -18,14 +18,14 @@ public class MostlyNonBlockingPortionQueue<E>
     private Object notEmptyCondition = new Object();
     
     
-    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, UnboundedNonBlockingQueue<E> unboundedQueue)
+    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> unboundedQueue)
     {
-    	this.unboundedQueue = unboundedQueue;
+    	this.nonBlockingQueue = unboundedQueue;
         this.maxSize = initialConsumerCount * producerCount * 1000;
         this.size = new AtomicInteger(0);
         this.workDone = false;
         
-        this.unboundedQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
+        this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
     
     @Override
@@ -48,7 +48,7 @@ public class MostlyNonBlockingPortionQueue<E>
                     }
                 }
             }
-            while (!this.unboundedQueue.tryEnqueue(portion));
+            while (!this.nonBlockingQueue.tryEnqueue(portion));
     
             if (newSize == this.maxSize * 1 / 4)
             {
@@ -71,11 +71,11 @@ public class MostlyNonBlockingPortionQueue<E>
         {
             E portion;
     
-            if ((portion = this.unboundedQueue.tryDequeue()) == null)
+            if ((portion = this.nonBlockingQueue.tryDequeue()) == null)
             {
                 synchronized (this.emptyCondition)
                 {
-                    while ((portion = this.unboundedQueue.tryDequeue()) == null)
+                    while ((portion = this.nonBlockingQueue.tryDequeue()) == null)
                     {
                         if (this.workDone)
                         {

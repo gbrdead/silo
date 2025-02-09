@@ -2,12 +2,11 @@
 #define __VOIDLAND_MOSTLY_NON_BLOCKING_PORTION_QUEUE_HPP__
 
 #include "MPMC_PortionQueue.hpp"
-#include "UnboundedNonBlockingQueue.hpp"
-
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <utility>
+#include "NonBlockingQueue.hpp"
 
 
 namespace org::voidland::concurrent::queue
@@ -19,7 +18,7 @@ class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
 {
 private:
-	std::unique_ptr<UnboundedNonBlockingQueue<E>> unboundedQueue;
+	std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
 
     std::size_t maxSize;
     std::atomic<std::size_t> size;
@@ -33,7 +32,7 @@ private:
     std::condition_variable notEmptyCondition;
 
 public:
-    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<UnboundedNonBlockingQueue<E>> unboundedQueue);
+    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> unboundedQueue);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -46,13 +45,13 @@ public:
 
 
 template <class E>
-MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<UnboundedNonBlockingQueue<E>> unboundedQueue) :
-	unboundedQueue(std::move(unboundedQueue)),
+MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> unboundedQueue) :
+	nonBlockingQueue(std::move(unboundedQueue)),
     maxSize(initialConsumerCount * producerCount * 1000),
     size(0),
     workDone(false)
 {
-	this->unboundedQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
+	this->nonBlockingQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
 }
 
 template <class E>
@@ -78,7 +77,7 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
             }
         }
     }
-    while (!this->unboundedQueue->tryEnqueue(std::move(portion)));
+    while (!this->nonBlockingQueue->tryEnqueue(std::move(portion)));
 
     if (newSize == this->maxSize * 1 / 4)
     {
@@ -92,10 +91,10 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
 {
     E portion;
 
-    if (!this->unboundedQueue->tryDequeue(portion))
+    if (!this->nonBlockingQueue->tryDequeue(portion))
     {
         std::unique_lock lock(this->emptyMutex);
-        while (!this->unboundedQueue->tryDequeue(portion))
+        while (!this->nonBlockingQueue->tryDequeue(portion))
         {
             if (this->workDone)
             {

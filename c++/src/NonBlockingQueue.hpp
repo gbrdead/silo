@@ -1,5 +1,5 @@
-#ifndef __VOIDLAND_UNBOUNDED_NON_BLOCKING_QUEUE_HPP__
-#define __VOIDLAND_UNBOUNDED_NON_BLOCKING_QUEUE_HPP__
+#ifndef __VOIDLAND_NON_BLOCKING_QUEUE_HPP__
+#define __VOIDLAND_NON_BLOCKING_QUEUE_HPP__
 
 #include <cstddef>
 #include <memory>
@@ -15,10 +15,10 @@ namespace org::voidland::concurrent::queue
 
 
 template <class E>
-class UnboundedNonBlockingQueue
+class NonBlockingQueue
 {
 public:
-	virtual ~UnboundedNonBlockingQueue();
+	virtual ~NonBlockingQueue();
 
 	virtual void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
@@ -27,12 +27,12 @@ public:
 };
 
 template <class E>
-UnboundedNonBlockingQueue<E>::~UnboundedNonBlockingQueue()
+NonBlockingQueue<E>::~NonBlockingQueue()
 {
 }
 
 template <class E>
-void UnboundedNonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void NonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
 }
 
@@ -40,7 +40,7 @@ void UnboundedNonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, 
 
 template <class E>
 class ConcurrentPortionQueue :
-    public UnboundedNonBlockingQueue<E>
+    public NonBlockingQueue<E>
 {
 private:
     std::unique_ptr<moodycamel::ConcurrentQueue<E>> queue;
@@ -81,7 +81,7 @@ bool ConcurrentPortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class AtomicPortionQueue :
-    public UnboundedNonBlockingQueue<E>
+    public NonBlockingQueue<E>
 {
 private:
     std::unique_ptr<atomic_queue::AtomicQueueB2<E>> queue;
@@ -123,7 +123,7 @@ bool AtomicPortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class LockfreePortionQueue :
-    public UnboundedNonBlockingQueue<E>
+    public NonBlockingQueue<E>
 {
 private:
     std::unique_ptr<boost::lockfree::queue<E*>> queue;
@@ -189,7 +189,7 @@ bool LockfreePortionQueue<E>::tryDequeue(E& portion)
 
 template <class E>
 class OneTBB_PortionQueue :
-    public UnboundedNonBlockingQueue<E>
+    public NonBlockingQueue<E>
 {
 private:
     oneapi::tbb::concurrent_queue<E> queue;
