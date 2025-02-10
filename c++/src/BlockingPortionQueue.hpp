@@ -26,8 +26,8 @@ private:
 
     // Not using counting_semaphore because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928 .
     std::mutex mutex;
-    std::condition_variable fullCondition;
-    std::condition_variable emptyCondition;
+    std::condition_variable notEmptyCondition;
+    std::condition_variable notFullCondition;
     bool workDone;
 
 public:
@@ -64,12 +64,12 @@ void TextbookPortionQueue<E>::addPortion(E&& portion)
 
     while (this->queue.size() >= this->maxSize)
     {
-        this->emptyCondition.wait(lock);
+        this->notFullCondition.wait(lock);
     }
 
     this->queue.push(std::move(portion));
 
-    this->fullCondition.notify_one();
+    this->notEmptyCondition.notify_one();
 }
 
 template <class E>
@@ -84,13 +84,13 @@ std::optional<E> TextbookPortionQueue<E>::retrievePortion()
             return std::nullopt;
         }
 
-        this->fullCondition.wait(lock);
+        this->notEmptyCondition.wait(lock);
     }
 
     E portion = std::move(this->queue.front());
     this->queue.pop();
 
-    this->emptyCondition.notify_one();
+    this->notFullCondition.notify_one();
 
     return portion;
 }
@@ -102,7 +102,7 @@ void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
 
     while (!this->queue.empty())
     {
-        this->emptyCondition.wait(lock);
+        this->notFullCondition.wait(lock);
     }
 }
 
@@ -113,7 +113,7 @@ void TextbookPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 
     this->workDone = true;
 
-    this->fullCondition.notify_all();
+    this->notEmptyCondition.notify_all();
 }
 
 template <class E>

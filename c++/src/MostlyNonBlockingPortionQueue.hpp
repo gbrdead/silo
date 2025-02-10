@@ -24,15 +24,15 @@ private:
     std::atomic<std::size_t> size;
     bool workDone;
 
-    std::mutex fullMutex;
-    std::mutex emptyMutex;
+    std::mutex notFullMutex;
     std::mutex notEmptyMutex;
-    std::condition_variable fullCondition;
-    std::condition_variable emptyCondition;
+    std::mutex emptyMutex;
+    std::condition_variable notFullCondition;
     std::condition_variable notEmptyCondition;
+    std::condition_variable emptyCondition;
 
 public:
-    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> unboundedQueue);
+    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -45,8 +45,8 @@ public:
 
 
 template <class E>
-MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> unboundedQueue) :
-	nonBlockingQueue(std::move(unboundedQueue)),
+MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue) :
+	nonBlockingQueue(std::move(nonBlockingQueue)),
     maxSize(initialConsumerCount * producerCount * 1000),
     size(0),
     workDone(false)
@@ -70,10 +70,10 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
     {
         if (this->size > this->maxSize)
         {
-            std::unique_lock lock(this->fullMutex);
+            std::unique_lock lock(this->notFullMutex);
             while (this->size > this->maxSize)
             {
-                this->fullCondition.wait(lock);
+                this->notFullCondition.wait(lock);
             }
         }
     }
@@ -81,8 +81,8 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
 
     if (newSize == this->maxSize * 1 / 4)
     {
-        std::lock_guard lock(this->emptyMutex);
-        this->emptyCondition.notify_all();
+        std::lock_guard lock(this->notEmptyMutex);
+        this->notEmptyCondition.notify_all();
     }
 }
 
@@ -93,27 +93,27 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
 
     if (!this->nonBlockingQueue->tryDequeue(portion))
     {
-        std::unique_lock lock(this->emptyMutex);
+        std::unique_lock lock(this->notEmptyMutex);
         while (!this->nonBlockingQueue->tryDequeue(portion))
         {
             if (this->workDone)
             {
                 return std::nullopt;
             }
-            this->emptyCondition.wait(lock);
+            this->notEmptyCondition.wait(lock);
         }
     }
 
     std::size_t newSize = --this->size;
     if (newSize == this->maxSize * 3 / 4)
     {
-        std::lock_guard lock(this->fullMutex);
-        this->fullCondition.notify_all();
+        std::lock_guard lock(this->notFullMutex);
+        this->notFullCondition.notify_all();
     }
     if (newSize == 0)
     {
-        std::lock_guard lock(this->notEmptyMutex);
-        this->notEmptyCondition.notify_one();
+        std::lock_guard lock(this->emptyMutex);
+        this->emptyCondition.notify_one();
     }
 
     return portion;
@@ -123,15 +123,15 @@ template <class E>
 void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
     {
-        std::lock_guard lock(this->emptyMutex);
-        this->emptyCondition.notify_all();
+        std::lock_guard lock(this->notEmptyMutex);
+        this->notEmptyCondition.notify_all();
     }
 
     {
-        std::unique_lock lock(this->notEmptyMutex);
+        std::unique_lock lock(this->emptyMutex);
         while (this->size > 0)
         {
-            this->notEmptyCondition.wait(lock);
+            this->emptyCondition.wait(lock);
         }
     }
 }
@@ -141,8 +141,8 @@ void MostlyNonBlockingPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 {
     this->workDone = true;
     {
-        std::lock_guard lock(this->emptyMutex);
-        this->emptyCondition.notify_all();
+        std::lock_guard lock(this->notEmptyMutex);
+        this->notEmptyCondition.notify_all();
     }
 }
 

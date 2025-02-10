@@ -16,8 +16,8 @@ public class TextbookPortionQueue<E>
 	
 	// Not using Semaphore in order to be 1:1 with the C++ version.
 	private Lock mutex;
-	private Condition fullCondition;
-	private Condition emptyCondition;
+	private Condition notEmptyCondition;
+	private Condition notFullCondition;
 	private boolean workDone;
 	
 	
@@ -27,8 +27,8 @@ public class TextbookPortionQueue<E>
 		this.queue = new ArrayDeque<>(this.maxSize);
 		
 		this.mutex = new ReentrantLock(false);
-		this.fullCondition = this.mutex.newCondition();
-		this.emptyCondition = this.mutex.newCondition();
+		this.notEmptyCondition = this.mutex.newCondition();
+		this.notFullCondition = this.mutex.newCondition();
 		this.workDone = false;
 	}
 	
@@ -40,12 +40,12 @@ public class TextbookPortionQueue<E>
 	    {
 	        while (this.queue.size() >= this.maxSize)
 	        {
-	            this.emptyCondition.awaitUninterruptibly();
+	            this.notFullCondition.awaitUninterruptibly();
 	        }
 
 	        this.queue.add(work);
 
-	        this.fullCondition.signal();
+	        this.notEmptyCondition.signal();
 	    }
 	    finally
 	    {
@@ -66,12 +66,12 @@ public class TextbookPortionQueue<E>
                     return null;
                 }
 
-                this.fullCondition.awaitUninterruptibly();
+                this.notEmptyCondition.awaitUninterruptibly();
             }
 
             E portion = this.queue.poll();
 
-            this.emptyCondition.signal();
+            this.notFullCondition.signal();
             
             return portion;
         }
@@ -89,7 +89,7 @@ public class TextbookPortionQueue<E>
         {
             while (!this.queue.isEmpty())
             {
-                this.emptyCondition.awaitUninterruptibly();
+                this.notFullCondition.awaitUninterruptibly();
             }
         }
         finally
@@ -106,7 +106,7 @@ public class TextbookPortionQueue<E>
         {
             this.workDone = true;
 
-            this.fullCondition.signalAll();
+            this.notEmptyCondition.signalAll();
         }
         finally
         {

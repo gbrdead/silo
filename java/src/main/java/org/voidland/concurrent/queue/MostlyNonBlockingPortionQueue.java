@@ -13,14 +13,14 @@ public class MostlyNonBlockingPortionQueue<E>
     private AtomicInteger size;
     private boolean workDone;
     
-    private Object fullCondition = new Object();
-    private Object emptyCondition = new Object();
+    private Object notFullCondition = new Object();
     private Object notEmptyCondition = new Object();
+    private Object emptyCondition = new Object();
     
     
-    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> unboundedQueue)
+    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> nonBlockingQueue)
     {
-    	this.nonBlockingQueue = unboundedQueue;
+    	this.nonBlockingQueue = nonBlockingQueue;
         this.maxSize = initialConsumerCount * producerCount * 1000;
         this.size = new AtomicInteger(0);
         this.workDone = false;
@@ -39,11 +39,11 @@ public class MostlyNonBlockingPortionQueue<E>
             {
                 if (this.size.get() > this.maxSize)
                 {
-                    synchronized (this.fullCondition)
+                    synchronized (this.notFullCondition)
                     {
                         if (this.size.get() > this.maxSize)
                         {
-                            this.fullCondition.wait();
+                            this.notFullCondition.wait();
                         }
                     }
                 }
@@ -52,9 +52,9 @@ public class MostlyNonBlockingPortionQueue<E>
     
             if (newSize == this.maxSize * 1 / 4)
             {
-                synchronized (this.emptyCondition)
+                synchronized (this.notEmptyCondition)
                 {
-                    this.emptyCondition.notifyAll();
+                    this.notEmptyCondition.notifyAll();
                 }
             }
         }
@@ -73,7 +73,7 @@ public class MostlyNonBlockingPortionQueue<E>
     
             if ((portion = this.nonBlockingQueue.tryDequeue()) == null)
             {
-                synchronized (this.emptyCondition)
+                synchronized (this.notEmptyCondition)
                 {
                     while ((portion = this.nonBlockingQueue.tryDequeue()) == null)
                     {
@@ -81,7 +81,7 @@ public class MostlyNonBlockingPortionQueue<E>
                         {
                             return null;
                         }
-                        this.emptyCondition.wait();
+                        this.notEmptyCondition.wait();
                     }
                 }
             }
@@ -89,16 +89,16 @@ public class MostlyNonBlockingPortionQueue<E>
             int newSize = this.size.decrementAndGet();
             if (newSize == this.maxSize * 3 / 4)
             {
-                synchronized (this.fullCondition)
+                synchronized (this.notFullCondition)
                 {
-                    this.fullCondition.notifyAll();
+                    this.notFullCondition.notifyAll();
                 }
             }
             if (newSize == 0)
             {
-                synchronized (this.notEmptyCondition)
+                synchronized (this.emptyCondition)
                 {
-                    this.notEmptyCondition.notify();
+                    this.emptyCondition.notify();
                 }
             }
     
@@ -115,16 +115,16 @@ public class MostlyNonBlockingPortionQueue<E>
     {
         try
         {
-            synchronized (this.emptyCondition)
+            synchronized (this.notEmptyCondition)
             {
-                this.emptyCondition.notifyAll();
+                this.notEmptyCondition.notifyAll();
             }
     
-            synchronized (this.notEmptyCondition)
+            synchronized (this.emptyCondition)
             {
                 while (this.size.get() > 0)
                 {
-                    this.notEmptyCondition.wait();
+                    this.emptyCondition.wait();
                 }
             }
         }
@@ -138,9 +138,9 @@ public class MostlyNonBlockingPortionQueue<E>
     public void stopConsumers(Collection<Thread> consumerThreads)
     {
         this.workDone = true;
-        synchronized (this.emptyCondition)
+        synchronized (this.notEmptyCondition)
         {
-            this.emptyCondition.notifyAll();
+            this.notEmptyCondition.notifyAll();
         }
     }
     
