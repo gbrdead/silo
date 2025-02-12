@@ -59,7 +59,7 @@ void WordsTrie::loadWords(const std::string& wordsFilePath)
 
         if (word.length() >= 3) // Short words significantly increase the count of false positives.
         {
-            this->addWord(*this->root, word.c_str());
+        	WordsTrie::addWord(*this->root, word.c_str());
         }
     }
 }
@@ -72,13 +72,12 @@ void WordsTrie::addWord(TrieNode& parent, const char* c)
         return;
     }
     TrieNode& child = parent.getOrCreateChild(*c);
-    this->addWord(child, c+1);
+    WordsTrie::addWord(child, c+1);
 }
 
 unsigned WordsTrie::countWords(const std::string& text)
 {
-    thread_local std::vector<const TrieNode*> iterators;
-    iterators.assign(text.length() + 1, nullptr);
+    std::vector<const TrieNode*> iterators(text.length() + 1, nullptr);
     iterators.front() = this->root.get();
     return this->countWords(text.c_str(), iterators);
 }

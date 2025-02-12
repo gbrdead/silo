@@ -24,7 +24,7 @@ public:
 
 private:
     void loadWords(const std::string& wordsFilePath);
-    void addWord(TrieNode& parent, const char* c);
+    static void addWord(TrieNode& parent, const char* c);
 
     unsigned countWords(const char* c, std::vector<const TrieNode*>& iterators);
 };

@@ -8,8 +8,6 @@ import java.util.Locale;
 
 public class WordsTrie
 {
-    private static ThreadLocal<TrieNode[]> iterators = new ThreadLocal<>();
-    
 	private TrieNode root;
 
 	
@@ -31,13 +29,13 @@ public class WordsTrie
                 word = word.toUpperCase(Locale.ENGLISH).replaceAll("[^A-Z]", "");
                 if (word.length() >= 3)	// Short words significantly increase the count of false positives.
                 {
-                	this.addWord(this.root, word, 0);
+                	WordsTrie.addWord(this.root, word, 0);
                 }
             }
         }
     }
     
-    private void addWord(TrieNode parent, CharSequence word, int charIndex)
+    private static void addWord(TrieNode parent, CharSequence word, int charIndex)
     {
     	if (charIndex >= word.length())
     	{
@@ -45,18 +43,12 @@ public class WordsTrie
     		return;
     	}
     	TrieNode child = parent.getOrCreateChild(word.charAt(charIndex));
-    	this.addWord(child, word, charIndex + 1);
+    	WordsTrie.addWord(child, word, charIndex + 1);
     }
     
     public int countWords(CharSequence text)
     {
-        TrieNode[] iterators = WordsTrie.iterators.get();
-        if (iterators == null  ||  iterators.length <= text.length())
-        {
-            iterators = new TrieNode[text.length() + 1];
-            WordsTrie.iterators.set(iterators);
-        }
-        
+        TrieNode[] iterators = new TrieNode[text.length() + 1];
         iterators[0] = this.root;
         for (int i = 1; i < iterators.length; i++)
         {
