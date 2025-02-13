@@ -13,11 +13,15 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 
-namespace org::voidland::concurrent::turning_grille
+namespace org::voidland::concurrent
 {
 
-bool VERBOSE = (std::getenv("VERBOSE") != nullptr) ? boost::iequals("true", std::getenv("VERBOSE")) : false;
+bool VERBOSE = (std::getenv("VERBOSE") != nullptr) && boost::iequals("true", std::getenv("VERBOSE"));
 
+}
+
+namespace org::voidland::concurrent::turning_grille
+{
 
 
 Grille::Grille() :
@@ -215,7 +219,6 @@ float GrilleInterval::calculateCompletion() const
 TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText) :
     cipherText(cipherText),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
-    milestoneReportInProgress(false),
     grilleCountAtMilestoneStart(0),
     bestGrillesPerSecond(0),
     grilleCountSoFar(0)
@@ -229,9 +232,9 @@ TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText) :
     }
 
     this->sideLength = (unsigned)std::sqrt((float)this->cipherText.length());
-    if (this->sideLength % 2 != 0  ||  this->sideLength * this->sideLength != this->cipherText.length())
+    if (this->sideLength == 0  ||  this->sideLength % 2 != 0  ||  this->sideLength * this->sideLength != this->cipherText.length())
     {
-        throw std::invalid_argument("The ciphertext length must be a square of an odd number.");
+        throw std::invalid_argument("The ciphertext length must be a square of a positive odd number.");
     }
 
     this->grilleCount = 1;
@@ -305,16 +308,14 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
     {
         std::chrono::high_resolution_clock::time_point milestoneEnd = std::chrono::high_resolution_clock::now();
 
-        bool expectedMilestoneInProgress = false;
-        if (this->milestoneReportInProgress.compare_exchange_strong(expectedMilestoneInProgress, true))
+        if (this->milestoneReportMutex.try_lock())
         {
-            std::chrono::high_resolution_clock::time_point milestoneStart = this->milestoneStart;
-            uint64_t grilleCountAtMilestoneStart = this->grilleCountAtMilestoneStart;
+        	std::lock_guard lock(this->milestoneReportMutex, std::adopt_lock);
 
-            if (milestoneEnd > milestoneStart  &&  grilleCountSoFar > grilleCountAtMilestoneStart)
+            if (milestoneEnd > this->milestoneStart  &&  grilleCountSoFar > this->grilleCountAtMilestoneStart)
             {
-                std::chrono::high_resolution_clock::duration elapsedTime = milestoneEnd - milestoneStart;
-                uint64_t grilleCountForMilestone = grilleCountSoFar - grilleCountAtMilestoneStart;
+                std::chrono::high_resolution_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
+                uint64_t grilleCountForMilestone = grilleCountSoFar - this->grilleCountAtMilestoneStart;
 
                 std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
                 uint64_t grillesPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
@@ -326,7 +327,7 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
 
                 std::string milestoneStatus = this->milestone(grillesPerSecond);
 
-                if (org::voidland::concurrent::turning_grille::VERBOSE)
+                if (VERBOSE)
                 {
                     float done = grilleCountSoFar * 100.0 / this->grilleCount;
 
@@ -343,8 +344,6 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
                 this->milestoneStart = milestoneEnd;
                 this->grilleCountAtMilestoneStart = grilleCountSoFar;
             }
-
-            this->milestoneReportInProgress = false;
         }
     }
 }
@@ -354,7 +353,7 @@ void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
     unsigned wordsFound = this->wordsTrie.countWords(candidate);
     if (wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT)
     {
-        if (org::voidland::concurrent::turning_grille::VERBOSE)
+        if (VERBOSE)
         {
             std::cout << (std::to_string(wordsFound) + ": " + candidate + '\n');
         }
@@ -445,7 +444,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
         this->prevGrillesPerSecond = grillesPerSecond;
     }
 
-    if (org::voidland::concurrent::turning_grille::VERBOSE)
+    if (VERBOSE)
     {
         std::ostringstream s;
         s << "consumer threads: " << this->consumerCount << "; queue size: " << queueSize << " / " << this->portionQueue->getMaxSize();
@@ -566,7 +565,7 @@ void TurningGrilleCrackerSyncless::startWorkerThreads(unsigned workerCount)
 
 std::string TurningGrilleCrackerSyncless::milestone(uint64_t grillesPerSecond)
 {
-    if (org::voidland::concurrent::turning_grille::VERBOSE)
+    if (VERBOSE)
     {
         std::ostringstream s;
         s << "worker threads: " << this->workersCount << "; completion per thread: ";

@@ -8,6 +8,7 @@
 #include <list>
 #include <thread>
 #include <chrono>
+#include <atomic>
 #include <boost/algorithm/string.hpp>
 #include <boost/core/demangle.hpp>
 
@@ -22,7 +23,7 @@ static void heatCpu()
     unsigned cpuCount = std::thread::hardware_concurrency();
     std::list<std::thread> workerThreads;
 
-    volatile bool stop = false;
+    std::atomic<bool> stop(false);
 
     for (unsigned i = 0; i < cpuCount; i++)
     {

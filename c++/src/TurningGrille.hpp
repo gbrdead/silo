@@ -16,8 +16,17 @@
 using namespace org::voidland::concurrent;
 
 
+namespace org::voidland::concurrent
+{
+
+extern bool VERBOSE;
+
+}
+
+
 namespace org::voidland::concurrent::turning_grille
 {
+
 
 class Grille
 {
@@ -75,7 +84,7 @@ private:
     std::string cipherText;
     WordsTrie wordsTrie;
 
-    std::atomic<bool> milestoneReportInProgress;
+    std::mutex milestoneReportMutex;
     std::chrono::high_resolution_clock::time_point start;
 
     uint64_t grilleCountAtMilestoneStart;

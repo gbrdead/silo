@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.voidland.concurrent.queue.BlockingPortionQueue;
 import org.voidland.concurrent.queue.ConcurrentNonBlockingQueue;
@@ -25,8 +26,6 @@ public class Silo
     private static final String CIPHER_TEXT_PATH = "encrypted_msg.txt";
     
     
-    private static volatile boolean stop;
-    
     private static void heatCpu()
     {
         try
@@ -34,20 +33,20 @@ public class Silo
             int cpuCount = Runtime.getRuntime().availableProcessors();
             List<Thread> workerThreads = new ArrayList<>(cpuCount);
     
-            Silo.stop = false;
+            AtomicBoolean stop = new AtomicBoolean(false);
     
             for (int i = 0; i < cpuCount; i++)
             {
                 Thread workerThread = new Thread(() ->
                 {
-                    while (!Silo.stop);
+                    while (!stop.get());
                 });
                 workerThread.start();
                 workerThreads.add(workerThread);
             }
     
             Thread.sleep(Duration.ofMinutes(1).toMillis());
-            Silo.stop = true;
+            stop.set(true);
     
             for (Thread workerThread : workerThreads)
             {
