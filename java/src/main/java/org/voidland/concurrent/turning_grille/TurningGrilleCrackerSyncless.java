@@ -10,26 +10,25 @@ import org.voidland.concurrent.Silo;
 
 
 public class TurningGrilleCrackerSyncless
-        extends TurningGrilleCracker
+        implements TurningGrilleCrackerImplDetails
 {
 	private AtomicInteger workersCount;
 	private List<Thread> workerThreads;
 	private List<GrilleInterval> grilleIntervals;
 	
 	
-    public TurningGrilleCrackerSyncless(String cipherText)
+    public TurningGrilleCrackerSyncless()
         throws IOException
     {
-        super(cipherText);
         this.workersCount = new AtomicInteger(0);
     }
 
     @Override
-    protected void doBruteForce()
+    public void bruteForce(TurningGrilleCracker cracker)
     {
         int cpuCount = Runtime.getRuntime().availableProcessors();
         
-        this.startWorkerThreads(cpuCount);
+        this.startWorkerThreads(cracker, cpuCount);
         
         try
         {
@@ -44,17 +43,17 @@ public class TurningGrilleCrackerSyncless
         }
     }
 
-    private void startWorkerThreads(int workerCount)
+    private void startWorkerThreads(TurningGrilleCracker cracker, int workerCount)
     {
         this.workerThreads = new ArrayList<>(workerCount);
         this.grilleIntervals = new ArrayList<>(workerCount);
         
         long nextIntervalBegin = 0;
-        long intervalLength = Math.round((double)this.grilleCount / workerCount);
+        long intervalLength = Math.round((double)cracker.grilleCount / workerCount);
         for (int i = 0; i < workerCount; i++)
         {
-            GrilleInterval grilleInterval = new GrilleInterval(this.sideLength / 2, nextIntervalBegin,
-                    (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : this.grilleCount);
+            GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin,
+                    (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
             this.grilleIntervals.add(grilleInterval);
             
             Thread workerThread = new Thread(() ->
@@ -63,7 +62,7 @@ public class TurningGrilleCrackerSyncless
                 Grille grille;
                 while ((grille = grilleInterval.getNext()) != null)
                 {
-                    applyGrille(grille);
+                    cracker.applyGrille(grille);
                 }
                 this.workersCount.decrementAndGet();
             });
@@ -75,7 +74,7 @@ public class TurningGrilleCrackerSyncless
     }
     
     @Override
-    protected String milestone(long grillesPerSecond)
+    public String milestone(TurningGrilleCracker cracker, long grillesPerSecond)
     {
         if (Silo.VERBOSE)
         {

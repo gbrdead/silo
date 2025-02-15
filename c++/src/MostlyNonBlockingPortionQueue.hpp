@@ -1,12 +1,15 @@
 #ifndef __VOIDLAND_MOSTLY_NON_BLOCKING_PORTION_QUEUE_HPP__
 #define __VOIDLAND_MOSTLY_NON_BLOCKING_PORTION_QUEUE_HPP__
 
+#include "NonBlockingQueue.hpp"
 #include "MPMC_PortionQueue.hpp"
+
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <utility>
-#include "NonBlockingQueue.hpp"
+#include <memory>
+
 
 
 namespace org::voidland::concurrent::queue

@@ -10,15 +10,15 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.voidland.concurrent.Silo;
 
 
-public abstract class TurningGrilleCracker
+public class TurningGrilleCracker
 {
     private static final String WORDS_FILE_PATH = "3000words.txt";
     private static final int MIN_DETECTED_WORD_COUNT = 17;	// Determined by gut feeling.
     
 
-    protected int sideLength;
-    protected long grilleCount;
-    protected AtomicLong grilleCountSoFar;
+    int sideLength;
+    long grilleCount;
+    AtomicLong grilleCountSoFar;
     
     private char[] cipherText;
     private WordsTrie wordsTrie;
@@ -29,9 +29,11 @@ public abstract class TurningGrilleCracker
     private long grilleCountAtMilestoneStart;
     private long milestoneStart;
     private long bestGrillesPerSecond;
+    
+    private TurningGrilleCrackerImplDetails implDetails;
 
     
-    public TurningGrilleCracker(String cipherText)
+    public TurningGrilleCracker(String cipherText, TurningGrilleCrackerImplDetails implDetails)
     	throws IOException
     {
     	cipherText = cipherText.toUpperCase(Locale.ENGLISH);
@@ -57,18 +59,22 @@ public abstract class TurningGrilleCracker
     
         this.milestoneReportMutex = new ReentrantLock(false);
         this.grilleCountSoFar = new AtomicLong(0);
+        
+        this.implDetails = implDetails;
     }
     
     public void bruteForce()
     {
         this.milestoneStart = this.start = System.nanoTime();
-        this.doBruteForce();
+        
+        this.implDetails.bruteForce(this);
+        
         long end = System.nanoTime();
         long elapsedTimeNs = end - this.start;
         long grillsPerSecond = this.grilleCount * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
 
         System.err.print("Average speed: " + grillsPerSecond + " grilles/s; best speed: " + this.bestGrillesPerSecond + " grilles/s");
-        String summary = this.milestonesSummary();
+        String summary = this.implDetails.milestonesSummary(this);
         if (summary.length() > 0)
         {
             System.err.print("; " + summary);
@@ -81,19 +87,7 @@ public abstract class TurningGrilleCracker
         }        
     }
     
-    protected abstract void doBruteForce();
-    
-    protected String milestone(long grillesPerSecond)
-    {
-        return "";
-    }
-    
-    protected String milestonesSummary()
-    {
-        return "";
-    }
-    
-    protected void applyGrille(Grille grill)
+    void applyGrille(Grille grill)
     {
         StringBuilder candidateBuf = new StringBuilder(this.cipherText.length);
         
@@ -136,7 +130,7 @@ public abstract class TurningGrilleCracker
 	                        this.bestGrillesPerSecond = grillesPerSecond;
 	                    }
 	        
-	                    String milestoneStatus = this.milestone(grillesPerSecond);
+	                    String milestoneStatus = this.implDetails.milestone(this, grillesPerSecond);
 	                    
 	                    if (Silo.VERBOSE)
 	                    {

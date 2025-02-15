@@ -62,7 +62,7 @@ ConcurrentPortionQueue<E>::ConcurrentPortionQueue()
 template <class E>
 void ConcurrentPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new moodycamel::ConcurrentQueue<E>(maxSize, 0, producerCount));
+	this->queue = std::make_unique<moodycamel::ConcurrentQueue<E>>(maxSize, 0, producerCount);
 }
 
 template <class E>
@@ -103,7 +103,7 @@ AtomicPortionQueue<E>::AtomicPortionQueue()
 template <class E>
 void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new atomic_queue::AtomicQueueB2<E>(maxSize));
+	this->queue = std::make_unique<atomic_queue::AtomicQueueB2<E>>(maxSize);
 }
 
 template <class E>
@@ -156,7 +156,7 @@ LockfreePortionQueue<E>::~LockfreePortionQueue()
 template <class E>
 void LockfreePortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
 {
-	this->queue.reset(new boost::lockfree::queue<E*>(maxSize));
+	this->queue = std::make_unique<boost::lockfree::queue<E*>>(maxSize);
 }
 
 template <class E>

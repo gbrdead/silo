@@ -10,10 +10,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.voidland.concurrent.queue.BlockingPortionQueue;
 import org.voidland.concurrent.queue.ConcurrentNonBlockingQueue;
+import org.voidland.concurrent.queue.MPMC_PortionQueue;
 import org.voidland.concurrent.queue.MostlyNonBlockingPortionQueue;
+import org.voidland.concurrent.queue.NonBlockingQueue;
 import org.voidland.concurrent.queue.TextbookPortionQueue;
 import org.voidland.concurrent.turning_grille.Grille;
 import org.voidland.concurrent.turning_grille.TurningGrilleCracker;
+import org.voidland.concurrent.turning_grille.TurningGrilleCrackerImplDetails;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerProducerConsumer;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerSyncless;
 
@@ -80,7 +83,7 @@ public class Silo
                 arg = "syncless";
             }
 
-            TurningGrilleCracker cracker;
+            TurningGrilleCrackerImplDetails crackerImplDetails;
             
             int cpuCount = Runtime.getRuntime().availableProcessors();
             switch (arg)
@@ -90,8 +93,9 @@ public class Silo
                     int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
-                    		new MostlyNonBlockingPortionQueue<Grille>(initialConsumerCount, producerCount, new ConcurrentNonBlockingQueue<Grille>()));
+                    NonBlockingQueue<Grille> nonBlockingQueue = new ConcurrentNonBlockingQueue<Grille>();
+                    MPMC_PortionQueue<Grille> portionQueue = new MostlyNonBlockingPortionQueue<Grille>(initialConsumerCount, producerCount, nonBlockingQueue);
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
                 case "blocking":
@@ -99,8 +103,8 @@ public class Silo
                     int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
-                    		new BlockingPortionQueue<Grille>(initialConsumerCount, producerCount));
+                    MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(initialConsumerCount, producerCount);
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
                 case "textbook":
@@ -108,13 +112,13 @@ public class Silo
                     int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     
-                    cracker = new TurningGrilleCrackerProducerConsumer(cipherText, initialConsumerCount, producerCount,
-                    		new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount));
+                    MPMC_PortionQueue<Grille> portionQueue = new TextbookPortionQueue<Grille>(initialConsumerCount, producerCount);
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
                 case "syncless":
                 {
-                    cracker = new TurningGrilleCrackerSyncless(cipherText);
+                	crackerImplDetails = new TurningGrilleCrackerSyncless();
                     break;
                 }
                 default:
@@ -123,6 +127,7 @@ public class Silo
                 }
             }
             
+            TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, crackerImplDetails);
             Silo.heatCpu();
             cracker.bruteForce();
         }

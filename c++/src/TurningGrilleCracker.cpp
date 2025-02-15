@@ -1,11 +1,10 @@
-#include "TurningGrille.hpp"
+#include "TurningGrilleCracker.hpp"
 
 #include <stdexcept>
 #include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
-#include <vector>
 #include <optional>
 #include <sstream>
 #include <boost/algorithm/string.hpp>
@@ -24,204 +23,13 @@ namespace org::voidland::concurrent::turning_grille
 {
 
 
-Grille::Grille() :
-    halfSideLength(0)
-{
-}
-
-Grille::Grille(unsigned halfSideLength, uint64_t ordinal) :
-    halfSideLength(halfSideLength),
-    holes(halfSideLength * halfSideLength, 0)
-{
-    for (std::vector<uint8_t>::iterator i = this->holes.begin(); (ordinal != 0) && (i != this->holes.end()); ++i)
-    {
-        *i = (ordinal & 0b11);
-        ordinal >>= 2;
-    }
-}
-
-Grille::Grille(const Grille& other) :
-    halfSideLength(other.halfSideLength),
-    holes(other.holes)
-{
-}
-
-Grille::Grille(Grille&& other) :
-    halfSideLength(other.halfSideLength),
-    holes(std::move(other.holes))
-{
-    other.halfSideLength = 0;
-}
-
-Grille::Grille(unsigned halfSideLength, std::vector<uint8_t>&& holes) :
-    halfSideLength(halfSideLength),
-    holes(std::move(holes))
-{
-}
-
-Grille& Grille::operator=(const Grille& other)
-{
-    this->halfSideLength = other.halfSideLength;
-    this->holes = other.holes;
-    return *this;
-}
-
-Grille& Grille::operator=(Grille&& other)
-{
-    this->halfSideLength = other.halfSideLength;
-    other.halfSideLength = 0;
-    this->holes = std::move(other.holes);
-    return *this;
-}
-
-Grille& Grille::operator++()
-{
-	for (uint8_t& hole : this->holes)
-    {
-        if (hole < 3)
-        {
-        	hole++;
-            break;
-        }
-        hole = 0;
-    }
-
-    return *this;
-}
-
-bool Grille::isHole(unsigned x, unsigned y, unsigned rotation) const
-{
-    unsigned sideLength = this->halfSideLength * 2;
-
-    unsigned origX, origY;
-    switch (rotation)
-    {
-        case 0:
-        {
-            origX = x;
-            origY = y;
-            break;
-        }
-        case 1:
-        {
-            origX = y;
-            origY = sideLength - 1 - x;
-            break;
-        }
-        case 2:
-        {
-            origX = sideLength - 1 - x;
-            origY = sideLength - 1 - y;
-            break;
-        }
-        case 3:
-        {
-            origX = sideLength - 1 - y;
-            origY = x;
-            break;
-        }
-        default:
-        {
-            throw std::invalid_argument("");
-        }
-    }
-
-    uint8_t quadrant;
-    unsigned holeX, holeY;
-    if (origX < this->halfSideLength)
-    {
-        if (origY < this->halfSideLength)
-        {
-            quadrant = 0;
-            holeX = origX;
-            holeY = origY;
-        }
-        else
-        {
-            quadrant = 3;
-            holeX = sideLength - 1 - origY;
-            holeY = origX;
-        }
-    }
-    else
-    {
-        if (origY < this->halfSideLength)
-        {
-            quadrant = 1;
-            holeX = origY;
-            holeY = sideLength - 1 - origX;
-        }
-        else
-        {
-            quadrant = 2;
-            holeX = sideLength - 1 - origX;
-            holeY = sideLength - 1 - origY;
-        }
-    }
-
-    return this->holes[holeX * this->halfSideLength + holeY] == quadrant;
-}
-
-
-GrilleInterval::GrilleInterval(unsigned halfSideLength, uint64_t begin, uint64_t end) :
-    next(halfSideLength, begin),
-    preincremented(true),
-	begin(begin),
-    nextOrdinal(begin),
-    end(end)
-{
-}
-
-std::optional<Grille> GrilleInterval::cloneNext()
-{
-    if (this->nextOrdinal >= this->end)
-    {
-        return std::nullopt;
-    }
-
-    if (!this->preincremented)
-    {
-        ++this->next;
-    }
-
-    Grille current(this->next);
-
-    ++this->next;
-    this->preincremented = true;
-
-    this->nextOrdinal++;
-    return current;
-}
-
-const Grille* GrilleInterval::getNext()
-{
-    if (this->nextOrdinal >= this->end)
-    {
-        return nullptr;
-    }
-
-    if (!this->preincremented)
-    {
-        ++this->next;
-    }
-    this->preincremented = false;
-
-    this->nextOrdinal++;
-    return &this->next;
-}
-
-float GrilleInterval::calculateCompletion() const
-{
-	return (this->nextOrdinal - this->begin) * 100.0f / (this->end - this->begin);
-}
-
-
-TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText) :
+TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails) :
     cipherText(cipherText),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
     grilleCountAtMilestoneStart(0),
     bestGrillesPerSecond(0),
-    grilleCountSoFar(0)
+    grilleCountSoFar(0),
+	implDetails(std::move(implDetails))
 {
     boost::to_upper(this->cipherText);
 
@@ -251,13 +59,15 @@ TurningGrilleCracker::~TurningGrilleCracker()
 void TurningGrilleCracker::bruteForce()
 {
     this->milestoneStart = this->start = std::chrono::steady_clock::now();
-    this->doBruteForce();
+
+    this->implDetails->bruteForce(*this);
+
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(end - this->start).count();
     uint64_t grillsPerSecond = this->grilleCount * std::nano::den / elapsedTimeNs;
 
     std::cerr << "Average speed: " << grillsPerSecond << " grilles/s; best speed: " << this->bestGrillesPerSecond << " grilles/s";
-    std::string summary = this->milestonesSummary();
+    std::string summary = this->implDetails->milestonesSummary(*this);
     if (summary.length() > 0)
     {
         std::cerr << "; " << summary;
@@ -268,16 +78,6 @@ void TurningGrilleCracker::bruteForce()
     {
         throw std::runtime_error("Some grilles got lost.");
     }
-}
-
-std::string TurningGrilleCracker::milestone(uint64_t grillesPerSecond)
-{
-    return "";
-}
-
-std::string TurningGrilleCracker::milestonesSummary()
-{
-    return "";
 }
 
 void TurningGrilleCracker::applyGrille(const Grille& grille)
@@ -325,7 +125,7 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
                     this->bestGrillesPerSecond = grillesPerSecond;
                 }
 
-                std::string milestoneStatus = this->milestone(grillesPerSecond);
+                std::string milestoneStatus = this->implDetails->milestone(*this, grillesPerSecond);
 
                 if (VERBOSE)
                 {
@@ -361,9 +161,7 @@ void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
 }
 
 
-
-TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned initialConsumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue) :
-    TurningGrilleCracker(cipherText),
+TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(unsigned initialConsumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue) :
     initialConsumerCount(initialConsumerCount),
     producerCount(producerCount),
     consumerCount(0),
@@ -377,10 +175,10 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const
 {
 }
 
-void TurningGrilleCrackerProducerConsumer::doBruteForce()
+void TurningGrilleCrackerProducerConsumer::bruteForce(TurningGrilleCracker& cracker)
 {
-	std::list<std::thread> producerThreads = this->startProducerThreads();
-    this->startInitialConsumerThreads();
+	std::list<std::thread> producerThreads = this->startProducerThreads(cracker);
+    this->startInitialConsumerThreads(cracker);
 
     for (std::thread& producerThread : producerThreads)
     {
@@ -388,7 +186,7 @@ void TurningGrilleCrackerProducerConsumer::doBruteForce()
     }
 
     this->portionQueue->ensureAllPortionsAreRetrieved();
-    while (this->grilleCountSoFar < this->grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
+    while (cracker.grilleCountSoFar < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
     this->portionQueue->stopConsumers(this->consumerCount);
 
     std::thread consumerThread;
@@ -398,7 +196,7 @@ void TurningGrilleCrackerProducerConsumer::doBruteForce()
     }
 }
 
-std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerSecond)
+std::string TurningGrilleCrackerProducerConsumer::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)
 {
     // Locking a mutex and notifying a condition variable are time-expensive but the thread is blocked for most of this time.
     // In order to utilize the CPUs fully we need more consumers than the count of CPUs.
@@ -412,7 +210,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
         this->bestConsumerCount = this->consumerCount;
     }
 
-    if (this->grilleCountSoFar < this->grilleCount)
+    if (cracker.grilleCountSoFar < cracker.grilleCount)
     {
         if (grillesPerSecond < this->prevGrillesPerSecond)
         {
@@ -433,7 +231,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
 
             if (this->addingThreads)
             {
-                this->consumerThreads.enqueue(this->startConsumerThread());
+                this->consumerThreads.enqueue(this->startConsumerThread(cracker));
             }
             else
             {
@@ -453,31 +251,31 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
     return "";
 }
 
-std::string TurningGrilleCrackerProducerConsumer::milestonesSummary()
+std::string TurningGrilleCrackerProducerConsumer::milestonesSummary(TurningGrilleCracker& cracker)
 {
     std::ostringstream s;
     s << "best consumer threads: " << this->bestConsumerCount;
     return s.str();
 }
 
-std::list<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThreads()
+std::list<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThreads(TurningGrilleCracker& cracker)
 {
 	std::list<std::thread> producerThreads;
 
     uint64_t nextIntervalBegin = 0;
-    uint64_t intervalLength = std::llround((long double)this->grilleCount / this->producerCount);
+    uint64_t intervalLength = std::lround((double)cracker.grilleCount / this->producerCount);
     for (unsigned i = 0; i < this->producerCount; i++)
     {
+    	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin,
+            (i < this->producerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
+
         producerThreads.push_back(std::thread
             {
-                [this, nextIntervalBegin, i, intervalLength]
+                [this, grilleInterval = std::move(grilleInterval)]
                 {
-                    GrilleInterval grilleInterval(this->sideLength / 2, nextIntervalBegin,
-                        (i < this->producerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
-
                     while (true)
 					{
-                    	std::optional<Grille> grille = grilleInterval.cloneNext();
+                    	std::optional<Grille> grille = grilleInterval->cloneNext();
                     	if (!grille)
                     	{
                     		break;
@@ -493,20 +291,20 @@ std::list<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThread
     return producerThreads;
 }
 
-void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads()
+void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads(TurningGrilleCracker& cracker)
 {
     for (unsigned i = 0; i < this->initialConsumerCount; i++)
     {
-        this->consumerThreads.enqueue(this->startConsumerThread());
+        this->consumerThreads.enqueue(this->startConsumerThread(cracker));
     }
 }
 
-std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
+std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGrilleCracker& cracker)
 {
     this->consumerCount++;
     return std::thread
         {
-            [this]
+            [this, &cracker]
             {
                 while (true)
                 {
@@ -517,7 +315,7 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
                 		break;
                 	}
 
-                    this->applyGrille(*grille);
+                    cracker.applyGrille(*grille);
 
                     if (this->shutdownNConsumers > 0)
                     {
@@ -543,18 +341,16 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
 }
 
 
-
-TurningGrilleCrackerSyncless::TurningGrilleCrackerSyncless(const std::string& cipherText) :
-    TurningGrilleCracker(cipherText),
+TurningGrilleCrackerSyncless::TurningGrilleCrackerSyncless() :
 	workersCount(0)
 {
 }
 
-void TurningGrilleCrackerSyncless::doBruteForce()
+void TurningGrilleCrackerSyncless::bruteForce(TurningGrilleCracker& cracker)
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
 
-    this->startWorkerThreads(cpuCount);
+    this->startWorkerThreads(cracker, cpuCount);
 
     for (std::thread& workerThread : this->workerThreads)
     {
@@ -562,25 +358,25 @@ void TurningGrilleCrackerSyncless::doBruteForce()
     }
 }
 
-void TurningGrilleCrackerSyncless::startWorkerThreads(unsigned workerCount)
+void TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
 {
     uint64_t nextIntervalBegin = 0;
-    uint64_t intervalLength = std::llround((long double)this->grilleCount / workerCount);
+    uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
     for (unsigned i = 0; i < workerCount; i++)
     {
-    	this->grilleIntervals.emplace_back(this->sideLength / 2, nextIntervalBegin,
-            (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
+    	this->grilleIntervals.emplace_back(cracker.sideLength / 2, nextIntervalBegin,
+            (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
     	GrilleInterval* grilleInterval = &this->grilleIntervals.back();
 
         this->workerThreads.push_back(std::thread
             {
-                [this, grilleInterval]
+                [this, &cracker, grilleInterval]
                 {
                     this->workersCount++;
                     const Grille* grille;
                     while ((grille = grilleInterval->getNext()))
                     {
-                        this->applyGrille(*grille);
+                        cracker.applyGrille(*grille);
                     }
                     this->workersCount--;
                 }
@@ -590,7 +386,7 @@ void TurningGrilleCrackerSyncless::startWorkerThreads(unsigned workerCount)
     }
 }
 
-std::string TurningGrilleCrackerSyncless::milestone(uint64_t grillesPerSecond)
+std::string TurningGrilleCrackerSyncless::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)
 {
     if (VERBOSE)
     {
@@ -614,5 +410,21 @@ std::string TurningGrilleCrackerSyncless::milestone(uint64_t grillesPerSecond)
     }
     return "";
 }
+
+
+TurningGrilleCrackerImplDetails::~TurningGrilleCrackerImplDetails()
+{
+}
+
+std::string TurningGrilleCrackerImplDetails::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)
+{
+	return std::string();
+}
+
+std::string TurningGrilleCrackerImplDetails::milestonesSummary(TurningGrilleCracker& cracker)
+{
+	return std::string();
+}
+
 
 }

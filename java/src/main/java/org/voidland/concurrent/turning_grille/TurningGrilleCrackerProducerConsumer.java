@@ -11,7 +11,7 @@ import org.voidland.concurrent.queue.MPMC_PortionQueue;
 
 
 public class TurningGrilleCrackerProducerConsumer
-        extends TurningGrilleCracker
+        implements TurningGrilleCrackerImplDetails
 {
     private int initialConsumerCount;
     private int producerCount;
@@ -28,10 +28,9 @@ public class TurningGrilleCrackerProducerConsumer
     long bestGrillesPerSecond;
 
     
-    public TurningGrilleCrackerProducerConsumer(String cipherText, int initialConsumerCount, int producerCount, MPMC_PortionQueue<Grille> portionQueue)
+    public TurningGrilleCrackerProducerConsumer(int initialConsumerCount, int producerCount, MPMC_PortionQueue<Grille> portionQueue)
         throws IOException
     {
-        super(cipherText);
         this.initialConsumerCount = initialConsumerCount;
         this.producerCount = producerCount;
         this.consumerCount = new AtomicInteger(0);
@@ -46,10 +45,10 @@ public class TurningGrilleCrackerProducerConsumer
     }
 
     @Override
-    protected void doBruteForce()
+    public void bruteForce(TurningGrilleCracker cracker)
     {
-    	List<Thread> producerThreads = this.startProducerThreads();
-        this.startInitialConsumerThreads();
+    	List<Thread> producerThreads = this.startProducerThreads(cracker);
+        this.startInitialConsumerThreads(cracker);
         
         try
         {
@@ -59,7 +58,7 @@ public class TurningGrilleCrackerProducerConsumer
             }
             
             this.portionQueue.ensureAllPortionsAreRetrieved();
-            while (this.grilleCountSoFar.get() < this.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
+            while (cracker.grilleCountSoFar.get() < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
             this.portionQueue.stopConsumers(this.consumerThreads);
             
             Thread consumerThread;
@@ -75,7 +74,7 @@ public class TurningGrilleCrackerProducerConsumer
     }
     
     @Override
-    protected String milestone(long grillesPerSecond)
+    public String milestone(TurningGrilleCracker cracker, long grillesPerSecond)
     {
         int queueSize = this.portionQueue.getSize();
 
@@ -85,7 +84,7 @@ public class TurningGrilleCrackerProducerConsumer
             this.bestConsumerCount = this.consumerCount.get();
         }
 
-        if (this.grilleCountSoFar.get() < this.grilleCount)
+        if (cracker.grilleCountSoFar.get() < cracker.grilleCount)
         {
             if (grillesPerSecond < this.prevGrillesPerSecond)
             {
@@ -106,7 +105,7 @@ public class TurningGrilleCrackerProducerConsumer
     
                 if (this.addingThreads)
                 {
-                    this.consumerThreads.add(this.startConsumerThread());
+                    this.consumerThreads.add(this.startConsumerThread(cracker));
                 }
                 else
                 {
@@ -125,21 +124,21 @@ public class TurningGrilleCrackerProducerConsumer
     }
     
     @Override
-    protected String milestonesSummary()
+    public String milestonesSummary(TurningGrilleCracker cracker)
     {
         return "best consumer threads: " + this.bestConsumerCount;
     }
 
-    private List<Thread> startProducerThreads()
+    private List<Thread> startProducerThreads(TurningGrilleCracker cracker)
     {
     	List<Thread> producerThreads = new ArrayList<>(this.producerCount);
     	
         long nextIntervalBegin = 0;
-        long intervalLength = Math.round((double)this.grilleCount / this.producerCount);
+        long intervalLength = Math.round((double)cracker.grilleCount / this.producerCount);
         for (int i = 0; i < this.producerCount; i++)
         {
-            GrilleInterval grilleInterval = new GrilleInterval(this.sideLength / 2, nextIntervalBegin,
-                    (i < this.producerCount - 1) ? (nextIntervalBegin + intervalLength) : this.grilleCount);
+            GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin,
+                    (i < this.producerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
             
             Thread producerThread = new Thread(() ->
             {
@@ -162,15 +161,15 @@ public class TurningGrilleCrackerProducerConsumer
         return producerThreads;
     }
     
-    private void startInitialConsumerThreads()
+    private void startInitialConsumerThreads(TurningGrilleCracker cracker)
     {
         for (int i = 0; i < this.initialConsumerCount; i++)
         {
-            this.consumerThreads.add(this.startConsumerThread());
+            this.consumerThreads.add(this.startConsumerThread(cracker));
         }
     }
     
-    private Thread startConsumerThread()
+    private Thread startConsumerThread(TurningGrilleCracker cracker)
     {
         this.consumerCount.getAndIncrement();
         Thread consumerThread = new Thread(() ->
@@ -184,7 +183,7 @@ public class TurningGrilleCrackerProducerConsumer
             		break;
             	}
         
-                this.applyGrille(grille);
+                cracker.applyGrille(grille);
                 
                 if (this.shutdownNConsumers.get() > 0)
                 {

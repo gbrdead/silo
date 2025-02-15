@@ -133,7 +133,7 @@ TrieNode& TrieNode::getOrCreateChild(char c)
 
     if (!charTrieNode)
     {
-        charTrieNode.reset(new TrieNode(c, this));
+        charTrieNode = std::make_unique<TrieNode>(c, this);
     }
 
     return *charTrieNode;
