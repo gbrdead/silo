@@ -85,10 +85,10 @@ private:
     WordsTrie wordsTrie;
 
     std::mutex milestoneReportMutex;
-    std::chrono::high_resolution_clock::time_point start;
+    std::chrono::steady_clock::time_point start;
 
     uint64_t grilleCountAtMilestoneStart;
-    std::chrono::high_resolution_clock::time_point milestoneStart;
+    std::chrono::steady_clock::time_point milestoneStart;
     uint64_t bestGrillesPerSecond;
 
 public:
@@ -119,9 +119,8 @@ private:
 
     std::atomic<unsigned> consumerCount;
     moodycamel::ConcurrentQueue<std::thread> consumerThreads;
-    std::list<std::thread> producerThreads;
 
-    std::atomic<bool> shutdownOneConsumer;
+    std::atomic<int> shutdownNConsumers;	// This may get negative, so don't make it unsigned.
     int improving;
     bool addingThreads;
     uint64_t prevGrillesPerSecond;
@@ -129,7 +128,7 @@ private:
     uint64_t bestGrillesPerSecond;
 
 public:
-    TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned consumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue);
+    TurningGrilleCrackerProducerConsumer(const std::string& cipherText, unsigned initialConsumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue);
 
 protected:
     void doBruteForce();
@@ -137,7 +136,7 @@ protected:
     std::string milestonesSummary();
 
 private:
-    void startProducerThreads();
+    std::list<std::thread> startProducerThreads();
     void startInitialConsumerThreads();
     std::thread startConsumerThread();
 };

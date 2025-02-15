@@ -250,9 +250,9 @@ TurningGrilleCracker::~TurningGrilleCracker()
 
 void TurningGrilleCracker::bruteForce()
 {
-    this->milestoneStart = this->start = std::chrono::high_resolution_clock::now();
+    this->milestoneStart = this->start = std::chrono::steady_clock::now();
     this->doBruteForce();
-    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(end - this->start).count();
     uint64_t grillsPerSecond = this->grilleCount * std::nano::den / elapsedTimeNs;
 
@@ -306,7 +306,7 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
     uint64_t grilleCountSoFar = ++this->grilleCountSoFar;
     if (grilleCountSoFar % (this->grilleCount / 1000) == 0)   // A milestone every 0.1%.
     {
-        std::chrono::high_resolution_clock::time_point milestoneEnd = std::chrono::high_resolution_clock::now();
+        std::chrono::steady_clock::time_point milestoneEnd = std::chrono::steady_clock::now();
 
         if (this->milestoneReportMutex.try_lock())
         {
@@ -314,7 +314,7 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
 
             if (milestoneEnd > this->milestoneStart  &&  grilleCountSoFar > this->grilleCountAtMilestoneStart)
             {
-                std::chrono::high_resolution_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
+                std::chrono::steady_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
                 uint64_t grilleCountForMilestone = grilleCountSoFar - this->grilleCountAtMilestoneStart;
 
                 std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
@@ -368,7 +368,7 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const
     producerCount(producerCount),
     consumerCount(0),
     portionQueue(std::move(portionQueue)),
-    shutdownOneConsumer(false),
+	shutdownNConsumers(0),
     addingThreads(true),
     prevGrillesPerSecond(0),
     bestGrillesPerSecond(prevGrillesPerSecond),
@@ -379,10 +379,10 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(const
 
 void TurningGrilleCrackerProducerConsumer::doBruteForce()
 {
-    this->startProducerThreads();
+	std::list<std::thread> producerThreads = this->startProducerThreads();
     this->startInitialConsumerThreads();
 
-    for (std::thread& producerThread : this->producerThreads)
+    for (std::thread& producerThread : producerThreads)
     {
         producerThread.join();
     }
@@ -437,7 +437,7 @@ std::string TurningGrilleCrackerProducerConsumer::milestone(uint64_t grillesPerS
             }
             else
             {
-                this->shutdownOneConsumer = true;
+                this->shutdownNConsumers++;
             }
         }
 
@@ -460,29 +460,37 @@ std::string TurningGrilleCrackerProducerConsumer::milestonesSummary()
     return s.str();
 }
 
-void TurningGrilleCrackerProducerConsumer::startProducerThreads()
+std::list<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThreads()
 {
+	std::list<std::thread> producerThreads;
+
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::llround((long double)this->grilleCount / this->producerCount);
     for (unsigned i = 0; i < this->producerCount; i++)
     {
-        this->producerThreads.push_back(std::thread
+        producerThreads.push_back(std::thread
             {
                 [this, nextIntervalBegin, i, intervalLength]
                 {
                     GrilleInterval grilleInterval(this->sideLength / 2, nextIntervalBegin,
                         (i < this->producerCount - 1) ? (nextIntervalBegin + intervalLength) : this->grilleCount);
 
-                    std::optional<Grille> grill;
-                    while ((grill = grilleInterval.cloneNext()))
-                    {
-                        this->portionQueue->addPortion(std::move(*grill));
-                    }
+                    while (true)
+					{
+                    	std::optional<Grille> grille = grilleInterval.cloneNext();
+                    	if (!grille)
+                    	{
+                    		break;
+                    	}
+                    	this->portionQueue->addPortion(std::move(*grille));
+					}
                 }
             });
 
         nextIntervalBegin += intervalLength;
     }
+
+    return producerThreads;
 }
 
 void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads()
@@ -500,17 +508,36 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread()
         {
             [this]
             {
-                std::optional<Grille> grille;
-                while ((grille = this->portionQueue->retrievePortion()).has_value())
+                while (true)
                 {
+                	std::optional<Grille> grille = this->portionQueue->retrievePortion();
+                	if (!grille.has_value())
+                	{
+                		this->consumerCount--;
+                		break;
+                	}
+
                     this->applyGrille(*grille);
-                    bool shutdown = this->shutdownOneConsumer.exchange(false);
-                    if (shutdown && this->consumerCount > 1)
+
+                    if (this->shutdownNConsumers > 0)
                     {
-                        break;
+						if (this->shutdownNConsumers.fetch_sub(1) > 0)
+						{
+							if (this->consumerCount.fetch_sub(1) > 1)		// There should be at least one consumer running.
+							{
+								break;
+							}
+							else
+							{
+								this->consumerCount++;
+							}
+						}
+						else
+						{
+							this->shutdownNConsumers++;
+						}
                     }
                 }
-                this->consumerCount--;
             }
         };
 }

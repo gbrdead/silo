@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.voidland.concurrent.Silo;
@@ -20,9 +19,8 @@ public class TurningGrilleCrackerProducerConsumer
     
     private AtomicInteger consumerCount;
     private ConcurrentLinkedQueue<Thread> consumerThreads;
-    private List<Thread> producerThreads;
-
-    private AtomicBoolean shutdownOneConsumer;
+    private AtomicInteger shutdownNConsumers;
+    
     private int improving;
     private boolean addingThreads;
     long prevGrillesPerSecond;
@@ -38,12 +36,11 @@ public class TurningGrilleCrackerProducerConsumer
         this.producerCount = producerCount;
         this.consumerCount = new AtomicInteger(0);
         this.portionQueue = portionQueue;
-        this.shutdownOneConsumer = new AtomicBoolean(false);
+        this.shutdownNConsumers = new AtomicInteger(0);
         this.addingThreads = true;
         this.prevGrillesPerSecond = 0;
         this.bestGrillesPerSecond = this.prevGrillesPerSecond;
         this.bestConsumerCount = 0;
-        this.producerThreads = new ArrayList<>(this.producerCount);
         this.consumerThreads = new ConcurrentLinkedQueue<>();
         this.improving = 0;
     }
@@ -51,12 +48,12 @@ public class TurningGrilleCrackerProducerConsumer
     @Override
     protected void doBruteForce()
     {
-        this.startProducerThreads();
+    	List<Thread> producerThreads = this.startProducerThreads();
         this.startInitialConsumerThreads();
         
         try
         {
-            for (Thread producerThread : this.producerThreads)
+            for (Thread producerThread : producerThreads)
             {
                 producerThread.join();
             }
@@ -113,7 +110,7 @@ public class TurningGrilleCrackerProducerConsumer
                 }
                 else
                 {
-                    this.shutdownOneConsumer.set(true);
+                    this.shutdownNConsumers.getAndIncrement();
                 }
             }
     
@@ -133,8 +130,10 @@ public class TurningGrilleCrackerProducerConsumer
         return "best consumer threads: " + this.bestConsumerCount;
     }
 
-    private void startProducerThreads()
+    private List<Thread> startProducerThreads()
     {
+    	List<Thread> producerThreads = new ArrayList<>(this.producerCount);
+    	
         long nextIntervalBegin = 0;
         long intervalLength = Math.round((double)this.grilleCount / this.producerCount);
         for (int i = 0; i < this.producerCount; i++)
@@ -144,17 +143,23 @@ public class TurningGrilleCrackerProducerConsumer
             
             Thread producerThread = new Thread(() ->
             {
-                Grille grille;
-                while ((grille = grilleInterval.cloneNext()) != null)
+                while (true)
                 {
-                    this.portionQueue.addPortion(grille);
+                	Grille grille = grilleInterval.cloneNext();
+                	if (grille == null)
+                	{
+                		break;
+                	}
+                	this.portionQueue.addPortion(grille);
                 }
             });
-            this.producerThreads.add(producerThread);
+            producerThreads.add(producerThread);
             producerThread.start();
             
             nextIntervalBegin += intervalLength;
         }
+        
+        return producerThreads;
     }
     
     private void startInitialConsumerThreads()
@@ -167,20 +172,39 @@ public class TurningGrilleCrackerProducerConsumer
     
     private Thread startConsumerThread()
     {
-        this.consumerCount.incrementAndGet();
+        this.consumerCount.getAndIncrement();
         Thread consumerThread = new Thread(() ->
         {
-            Grille grille;
-            while ((grille = portionQueue.retrievePortion()) != null)
+            while (true)
             {
+            	Grille grille = portionQueue.retrievePortion();
+            	if (grille == null)
+            	{
+            		this.consumerCount.getAndDecrement();
+            		break;
+            	}
+        
                 this.applyGrille(grille);
-                boolean shutdown = this.shutdownOneConsumer.getAndSet(false);
-                if (shutdown && this.consumerCount.get() > 1)
+                
+                if (this.shutdownNConsumers.get() > 0)
                 {
-                    break;
+	              	if (this.shutdownNConsumers.getAndDecrement() > 0)
+	                {
+	                	if (this.consumerCount.getAndDecrement() > 1)	// There should be at least one consumer running.
+						{
+							return;
+						}
+						else
+						{
+							this.consumerCount.getAndIncrement();
+						}
+	                }
+	                else
+	                {
+	                	this.shutdownNConsumers.getAndIncrement();
+	                }
                 }
             }
-            this.consumerCount.decrementAndGet();
         });
         consumerThread.start();
         return consumerThread;
