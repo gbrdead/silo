@@ -13,7 +13,6 @@ public class TurningGrilleCrackerSyncless
         implements TurningGrilleCrackerImplDetails
 {
 	private AtomicInteger workersCount;
-	private List<Thread> workerThreads;
 	private List<GrilleInterval> grilleIntervals;
 	
 	
@@ -28,11 +27,11 @@ public class TurningGrilleCrackerSyncless
     {
         int cpuCount = Runtime.getRuntime().availableProcessors();
         
-        this.startWorkerThreads(cracker, cpuCount);
+        List<Thread> workerThreads = this.startWorkerThreads(cracker, cpuCount);
         
         try
         {
-            for (Thread workerThread : this.workerThreads)
+            for (Thread workerThread : workerThreads)
             {
                 workerThread.join();
             }
@@ -43,34 +42,37 @@ public class TurningGrilleCrackerSyncless
         }
     }
 
-    private void startWorkerThreads(TurningGrilleCracker cracker, int workerCount)
+    private List<Thread> startWorkerThreads(TurningGrilleCracker cracker, int workerCount)
     {
-        this.workerThreads = new ArrayList<>(workerCount);
+    	List<Thread> workerThreads = new ArrayList<>(workerCount);
         this.grilleIntervals = new ArrayList<>(workerCount);
         
         long nextIntervalBegin = 0;
         long intervalLength = Math.round((double)cracker.grilleCount / workerCount);
         for (int i = 0; i < workerCount; i++)
         {
+        	this.workersCount.getAndIncrement();
+        	
             GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin,
                     (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
             this.grilleIntervals.add(grilleInterval);
-            
             Thread workerThread = new Thread(() ->
             {
-            	this.workersCount.incrementAndGet();
+            	
                 Grille grille;
                 while ((grille = grilleInterval.getNext()) != null)
                 {
                     cracker.applyGrille(grille);
                 }
-                this.workersCount.decrementAndGet();
+                this.workersCount.getAndDecrement();
             });
-            this.workerThreads.add(workerThread);
+            workerThreads.add(workerThread);
             workerThread.start();
             
             nextIntervalBegin += intervalLength;
         }
+        
+        return workerThreads;
     }
     
     @Override

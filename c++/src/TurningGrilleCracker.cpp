@@ -350,29 +350,31 @@ void TurningGrilleCrackerSyncless::bruteForce(TurningGrilleCracker& cracker)
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
 
-    this->startWorkerThreads(cracker, cpuCount);
+    std::list<std::thread> workerThreads = this->startWorkerThreads(cracker, cpuCount);
 
-    for (std::thread& workerThread : this->workerThreads)
+    for (std::thread& workerThread : workerThreads)
     {
         workerThread.join();
     }
 }
 
-void TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
+std::list<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
 {
+	std::list<std::thread> workerThreads;
+
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
     for (unsigned i = 0; i < workerCount; i++)
     {
+    	this->workersCount++;
+
     	this->grilleIntervals.emplace_back(cracker.sideLength / 2, nextIntervalBegin,
             (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
     	GrilleInterval* grilleInterval = &this->grilleIntervals.back();
-
-        this->workerThreads.push_back(std::thread
+        workerThreads.push_back(std::thread
             {
                 [this, &cracker, grilleInterval]
                 {
-                    this->workersCount++;
                     const Grille* grille;
                     while ((grille = grilleInterval->getNext()))
                     {
@@ -384,6 +386,8 @@ void TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& crac
 
         nextIntervalBegin += intervalLength;
     }
+
+    return workerThreads;
 }
 
 std::string TurningGrilleCrackerSyncless::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)

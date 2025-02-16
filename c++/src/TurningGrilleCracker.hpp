@@ -119,7 +119,6 @@ class TurningGrilleCrackerSyncless :
 {
 private:
 	std::atomic<unsigned> workersCount;
-	std::list<std::thread> workerThreads;
 	std::list<GrilleInterval> grilleIntervals;
 
 public:
@@ -129,7 +128,7 @@ public:
     std::string milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond);
 
 private:
-    void startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
+    std::list<std::thread> startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
 };
 
 
