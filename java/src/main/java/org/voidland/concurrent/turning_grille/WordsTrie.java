@@ -14,7 +14,7 @@ public class WordsTrie
 	public WordsTrie(String wordsFilePath)
 		throws IOException
 	{
-		this.root = new TrieNode('\0', null);
+		this.root = new TrieNode();
 		this.loadWords(wordsFilePath);
 	}
 	
@@ -50,71 +50,46 @@ public class WordsTrie
     {
         TrieNode[] iterators = new TrieNode[text.length() + 1];
         iterators[0] = this.root;
-        for (int i = 1; i < iterators.length; i++)
-        {
-            iterators[i] = null;
-        }
         
-    	return this.countWords(text, 0, iterators);
-    }
-    
-    private int countWords(CharSequence text, int charIndex, TrieNode[] iterators)
-    {
-    	if (charIndex >= text.length())
-    	{
-    		return 0;
-    	}
-    	
-    	int words = 0;
-    	char c = text.charAt(charIndex);
-    	
-        int i = 0;
-        int j = 0;
-    	
-  		while (iterators[i] != null)
-    	{
-    		TrieNode nextIterator = iterators[i].getChild(c);
-    		iterators[i] = null;
-    		i++;
-    		
-    		if (nextIterator == null)
-    		{
-    			continue;
-    		}
-    		
-    		if (nextIterator.isWordEnd())
-    		{
-    			words++;
-    		}
-    		
-    		iterators[j] = nextIterator;
-    		j++;
-    	}
-	    iterators[j] = this.root;
-    	
-    	return words + this.countWords(text, charIndex + 1, iterators);
+        int words = 0;
+        for (int charIndex = 0; charIndex < text.length(); charIndex++)
+        {
+        	char c = text.charAt(charIndex);
+            int i = 0;
+            int j = 0;
+      		while (iterators[i] != null)
+        	{
+        		TrieNode nextIterator = iterators[i].getChild(c);
+        		iterators[i] = null;
+        		i++;
+        		
+        		if (nextIterator == null)
+        		{
+        			continue;
+        		}
+        		
+        		if (nextIterator.isWordEnd())
+        		{
+        			words++;
+        		}
+        		
+        		iterators[j] = nextIterator;
+        		j++;
+        	}
+    	    iterators[j] = this.root;
+        }
+    	return words;
     }
 	
 
     private static class TrieNode
 	{
-    	private TrieNode parent;
-    	private char c;
-    	
 		private TrieNode[] children;
 		private boolean wordEnd;
 		
-		public TrieNode(char c, TrieNode parent)
+		public TrieNode()
 		{
-			this.c = c;
-			this.parent = parent;
-			
 			this.children = new TrieNode['Z' - 'A' + 1];
-			for (int i = 0; i < this.children.length; i++)
-			{
-				this.children[i] = null;
-			}
-			
 			this.wordEnd = false;
 		}
 		
@@ -123,7 +98,7 @@ public class WordsTrie
 			int i = c - 'A';
 			if (this.children[i] == null)
 			{
-				this.children[i] = new TrieNode(c, this);
+				this.children[i] = new TrieNode();
 			}
 			return this.children[i];
 		}
@@ -142,19 +117,6 @@ public class WordsTrie
 		public void setWordEnd()
 		{
 			this.wordEnd = true;
-		}
-		
-		@SuppressWarnings("unused")
-        public String getWord()
-		{
-			StringBuilder sb = new StringBuilder();
-			TrieNode n = this;
-			while (n.c != '\0')
-			{
-				sb.insert(0, n.c);
-				n = n.parent;
-			}
-			return sb.toString();
 		}
 	}
 }

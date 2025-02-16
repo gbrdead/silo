@@ -77,51 +77,42 @@ public:
 private:
     void loadWords(const std::string& wordsFilePath);
     static void addWord(TrieNode& parent, const char* c);
-
-    unsigned countWords(const char* c, std::vector<const TrieNode*>& iterators);
 };
 
 inline unsigned WordsTrie::countWords(const std::string& text)
 {
     std::vector<const TrieNode*> iterators(text.length() + 1, nullptr);
     iterators.front() = this->root.get();
-    return this->countWords(text.c_str(), iterators);
-}
-
-inline unsigned WordsTrie::countWords(const char* c, std::vector<const TrieNode*>& iterators)
-{
-    if (*c == '\0')
-    {
-        return 0;
-    }
 
     unsigned words = 0;
-
-    std::vector<const TrieNode*>::iterator i = iterators.begin();
-    std::vector<const TrieNode*>::iterator j = iterators.begin();
-
-    while (*i != nullptr)
+    for (const char* c = text.c_str(); *c != '\0'; c++)
     {
-        const TrieNode* nextIterator = (*i)->getChild(*c);
-        *i = nullptr;
-        i++;
+        std::vector<const TrieNode*>::iterator i = iterators.begin();
+        std::vector<const TrieNode*>::iterator j = iterators.begin();
 
-        if (!nextIterator)
+        while (*i != nullptr)
         {
-            continue;
-        }
+            const TrieNode* nextIterator = (*i)->getChild(*c);
+            *i = nullptr;
+            i++;
 
-        if (nextIterator->isWordEnd())
-        {
-            words++;
-        }
+            if (!nextIterator)
+            {
+                continue;
+            }
 
-        *j = nextIterator;
-        j++;
+            if (nextIterator->isWordEnd())
+            {
+                words++;
+            }
+
+            *j = nextIterator;
+            j++;
+        }
+        *j = this->root.get();
     }
-    *j = this->root.get();
 
-    return words + this->countWords(c+1, iterators);
+    return words;
 }
 
 
