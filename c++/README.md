@@ -6,7 +6,7 @@
 
 `# apt install g++ autoconf automake autoconf-archive make libboost-all-dev libtbb-dev`  
 `$ ./autogen.sh`  
-`$ ./configure`  
+`$ CXXFLAGS="-O3" ./configure`  
 `$ make`  
 
 ### Detailed build instructions
@@ -42,6 +42,7 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 | textbook | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | no |
 | onetbb | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly (?) | no |
 | onetbb_bounded | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | mostly (?) | no |
+| sync_bounded | [Boost synchronous bounded queue](https://www.boost.org/doc/libs/release/doc/html/thread/sds.html#thread.sds.synchronized_queues.ref.sync_bounded_queue_ref) | no | no (?) |
 
 ## Test results
 
@@ -65,4 +66,4 @@ Some remarks:
 - `boost::sync_bounded_queue` is not tested because it is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a dead lock.
 
 ## TODO
-Measure the performance with Clang. The tests so far have been performed with GCC.
+- Measure the performance with Clang. The tests so far have been performed with GCC.

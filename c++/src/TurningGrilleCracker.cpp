@@ -177,7 +177,7 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(unsig
 
 void TurningGrilleCrackerProducerConsumer::bruteForce(TurningGrilleCracker& cracker)
 {
-	std::list<std::thread> producerThreads = this->startProducerThreads(cracker);
+	std::vector<std::thread> producerThreads = this->startProducerThreads(cracker);
     this->startInitialConsumerThreads(cracker);
 
     for (std::thread& producerThread : producerThreads)
@@ -258,9 +258,10 @@ std::string TurningGrilleCrackerProducerConsumer::milestonesSummary(TurningGrill
     return s.str();
 }
 
-std::list<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThreads(TurningGrilleCracker& cracker)
+std::vector<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThreads(TurningGrilleCracker& cracker)
 {
-	std::list<std::thread> producerThreads;
+	std::vector<std::thread> producerThreads;
+	producerThreads.reserve(this->producerCount);
 
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::lround((double)cracker.grilleCount / this->producerCount);
@@ -350,7 +351,7 @@ void TurningGrilleCrackerSyncless::bruteForce(TurningGrilleCracker& cracker)
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
 
-    std::list<std::thread> workerThreads = this->startWorkerThreads(cracker, cpuCount);
+    std::vector<std::thread> workerThreads = this->startWorkerThreads(cracker, cpuCount);
 
     for (std::thread& workerThread : workerThreads)
     {
@@ -358,9 +359,12 @@ void TurningGrilleCrackerSyncless::bruteForce(TurningGrilleCracker& cracker)
     }
 }
 
-std::list<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
+std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
 {
-	std::list<std::thread> workerThreads;
+	std::vector<std::thread> workerThreads;
+	workerThreads.reserve(workerCount);
+
+	this->grilleIntervalsCompletion.reserve(workerCount);
 
     uint64_t nextIntervalBegin = 0;
     uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
@@ -368,18 +372,28 @@ std::list<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningG
     {
     	this->workersCount++;
 
-    	this->grilleIntervals.emplace_back(cracker.sideLength / 2, nextIntervalBegin,
-            (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
-    	GrilleInterval* grilleInterval = &this->grilleIntervals.back();
+    	uint64_t nextIntervalEnd = (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount;
+    	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
+
+    	this->grilleIntervalsCompletion.emplace_back(std::make_pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>(
+				std::make_unique<std::atomic<uint64_t>>(0),
+				(nextIntervalEnd - nextIntervalBegin)));
+    	std::atomic<uint64_t> *processedGrillsCount = this->grilleIntervalsCompletion.back().first.get();
+
         workerThreads.push_back(std::thread
             {
-                [this, &cracker, grilleInterval]
+                [this, &cracker, grilleInterval = std::move(grilleInterval), processedGrillsCount]
                 {
-                    const Grille* grille;
-                    while ((grille = grilleInterval->getNext()))
-                    {
+                	while (true)
+                	{
+                		const Grille* grille = grilleInterval->getNext();
+                		if (grille == nullptr)
+						{
+                			break;
+						}
                         cracker.applyGrille(*grille);
-                    }
+                        (*processedGrillsCount)++;
+                	}
                     this->workersCount--;
                 }
             });
@@ -397,16 +411,20 @@ std::string TurningGrilleCrackerSyncless::milestone(TurningGrilleCracker& cracke
         std::ostringstream s;
         s << "worker threads: " << this->workersCount << "; completion per thread: ";
 
-        std::list<GrilleInterval>::const_iterator i = this->grilleIntervals.begin();
-        while (i != this->grilleIntervals.end())
+        bool first = true;
+        for (const std::pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>& intervalCompletion : this->grilleIntervalsCompletion)
         {
-        	const GrilleInterval& grilleInterval = *i;
-        	s << std::fixed << std::setprecision(1) << grilleInterval.calculateCompletion();
-        	i++;
-        	if (i != this->grilleIntervals.end())
-        	{
-        		s << "/";
-        	}
+            if (!first)
+            {
+            	s << "/";
+            }
+            else
+            {
+                first = false;
+            }
+
+            float completion = (*intervalCompletion.first) * 100.0f / intervalCompletion.second;
+            s << std::fixed << std::setprecision(1) << completion;
         }
         s << "% done";
 

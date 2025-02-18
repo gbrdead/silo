@@ -1,0 +1,12 @@
+[package]
+name = "rust"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+regex = "1.11.1"
+concurrent-queue = "2.5.0"
+
+[[bin]]
+name = "silo"
+path = "src/silo.rs"

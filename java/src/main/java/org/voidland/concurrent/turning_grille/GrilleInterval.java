@@ -5,7 +5,6 @@ public class GrilleInterval
 {
     private Grille next;
     boolean preincremented;
-    private long begin;
     private long nextOrdinal;
     private long end;
     
@@ -14,7 +13,6 @@ public class GrilleInterval
     {
         this.next = new Grille(halfSideLength, begin);
         this.preincremented = true;
-        this.begin = begin;
         this.nextOrdinal = begin;
         this.end = end;
     }
@@ -55,10 +53,5 @@ public class GrilleInterval
 
         this.nextOrdinal++;
         return this.next;
-    }
-    
-    public float calculateCompletion()
-    {
-    	return (this.nextOrdinal - this.begin) * 100.0f / (this.end - this.begin);
     }
 }

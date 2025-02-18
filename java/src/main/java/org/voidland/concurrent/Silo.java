@@ -82,6 +82,8 @@ public class Silo
             {
                 arg = "syncless";
             }
+            
+            Silo.heatCpu();
 
             TurningGrilleCrackerImplDetails crackerImplDetails;
             
@@ -128,7 +130,6 @@ public class Silo
             }
             
             TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, crackerImplDetails);
-            Silo.heatCpu();
             cracker.bruteForce();
         }
         catch (Exception e)

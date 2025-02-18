@@ -176,7 +176,6 @@ class GrilleInterval
 private:
     Grille next;
     bool preincremented;
-    uint64_t begin;
     uint64_t nextOrdinal;
     uint64_t end;
 
@@ -185,14 +184,11 @@ public:
 
     std::optional<Grille> cloneNext();
     const Grille* getNext();
-
-    float calculateCompletion() const;
 };
 
 inline GrilleInterval::GrilleInterval(unsigned halfSideLength, uint64_t begin, uint64_t end) :
     next(halfSideLength, begin),
     preincremented(true),
-	begin(begin),
     nextOrdinal(begin),
     end(end)
 {
@@ -234,11 +230,6 @@ inline const Grille* GrilleInterval::getNext()
 
     this->nextOrdinal++;
     return &this->next;
-}
-
-inline float GrilleInterval::calculateCompletion() const
-{
-	return (this->nextOrdinal - this->begin) * 100.0f / (this->end - this->begin);
 }
 
 

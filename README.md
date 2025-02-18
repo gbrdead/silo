@@ -4,9 +4,11 @@ This project compares the multi-threading performance of the following runtimes:
 
 - [C++/native](c++/README.md)
 - [Java/JVM](java/README.md)
-- [Rust/native](rust/README.md) (work in progress)
+- [Rust/native](rust/README.md)
 
-The test results and conclusions are at the bottom.
+The test results and conclusions are at the bottom.  
+***Note: the measurements are still in progress.***
+
 
 ### Description of the performance test
 
@@ -78,6 +80,7 @@ Intel Core i5-4210M
 | runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
 | **C++/native** | 839 |  | 657 |
+| **Rust/native** |  |  |  |
 | **Java/JVM** |  |  |  |
 
 Intel Core i5-10210U
@@ -85,6 +88,7 @@ Intel Core i5-10210U
 | runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
 | **C++/native** | 1397 | 1263 | 1032 |
+| **Rust/native** |  |  |  |
 | **Java/JVM** | 821 | 659 | 572 |
 
 AMD Ryzen 7735HS
@@ -92,12 +96,13 @@ AMD Ryzen 7735HS
 | runtime / scenario implementation | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
 | **C++/native** | 3582 | 3017 | 1487 |
+| **Rust/native** |  |  |  |
 | **Java/JVM** | 1770 | 1951 | 1068 |
 
 ---
 
 General results:
-- Statically-optimized native code is about 1.5 times faster than dynamically-optimized JIT-compiled code. In short: C++ is 1.5 times faster than Java.
+- Statically-optimized native code is about 1.5-2 times faster than dynamically-optimized JIT-compiled code. In short: C++ and Rust are significantly faster than Java for general purpose calculations.
 - The single-core performance per GHz has stayed pretty constant for an entire decade.
 - Non-blocking queues perform much better than blocking ones.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
@@ -105,7 +110,7 @@ General results:
 Conclusions:
 - If you want an algorithm to take any advantage of new CPUs it must be parallelized.
 - Use non-blocking synchronization to scale better with higher hardware parallelism.
-- If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ instead of Java.
+- If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ or Rust instead of Java.
 
 Language/runtime-specific results:
 - [C++ results and conslusions](c++/README.md)

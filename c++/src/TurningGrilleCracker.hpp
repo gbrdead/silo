@@ -8,10 +8,10 @@
 #include <string>
 #include <cstdint>
 #include <chrono>
-#include <list>
 #include <thread>
 #include <memory>
 #include <atomic>
+#include <vector>
 #include "concurrentqueue/concurrentqueue.h"
 
 using namespace org::voidland::concurrent;
@@ -108,7 +108,7 @@ public:
     std::string milestonesSummary(TurningGrilleCracker& cracker);
 
 private:
-    std::list<std::thread> startProducerThreads(TurningGrilleCracker& cracker);
+    std::vector<std::thread> startProducerThreads(TurningGrilleCracker& cracker);
     void startInitialConsumerThreads(TurningGrilleCracker& cracker);
     std::thread startConsumerThread(TurningGrilleCracker& cracker);
 };
@@ -119,7 +119,7 @@ class TurningGrilleCrackerSyncless :
 {
 private:
 	std::atomic<unsigned> workersCount;
-	std::list<GrilleInterval> grilleIntervals;
+	std::vector<std::pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>> grilleIntervalsCompletion;
 
 public:
     TurningGrilleCrackerSyncless();
@@ -128,7 +128,7 @@ public:
     std::string milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond);
 
 private:
-    std::list<std::thread> startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
+    std::vector<std::thread> startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
 };
 
 

@@ -2,9 +2,9 @@ package org.voidland.concurrent.turning_grille;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.voidland.concurrent.Silo;
 
@@ -13,7 +13,7 @@ public class TurningGrilleCrackerSyncless
         implements TurningGrilleCrackerImplDetails
 {
 	private AtomicInteger workersCount;
-	private List<GrilleInterval> grilleIntervals;
+	private List<Pair<AtomicLong, Long>> grilleIntervalsCompletion;
 	
 	
     public TurningGrilleCrackerSyncless()
@@ -45,7 +45,7 @@ public class TurningGrilleCrackerSyncless
     private List<Thread> startWorkerThreads(TurningGrilleCracker cracker, int workerCount)
     {
     	List<Thread> workerThreads = new ArrayList<>(workerCount);
-        this.grilleIntervals = new ArrayList<>(workerCount);
+        this.grilleIntervalsCompletion = new ArrayList<>(workerCount);
         
         long nextIntervalBegin = 0;
         long intervalLength = Math.round((double)cracker.grilleCount / workerCount);
@@ -53,17 +53,25 @@ public class TurningGrilleCrackerSyncless
         {
         	this.workersCount.getAndIncrement();
         	
-            GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin,
-                    (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount);
-            this.grilleIntervals.add(grilleInterval);
+        	long nextIntervalEnd = (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount;
+            GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
+            
+            Pair<AtomicLong, Long> intervalCompletion = new Pair<AtomicLong, Long>(new AtomicLong(0), (nextIntervalEnd - nextIntervalBegin));
+            this.grilleIntervalsCompletion.add(intervalCompletion);
+            AtomicLong processedGrillsCount = intervalCompletion.first;
+            
             Thread workerThread = new Thread(() ->
             {
-            	
-                Grille grille;
-                while ((grille = grilleInterval.getNext()) != null)
-                {
+            	while (true)
+            	{
+            		Grille grille = grilleInterval.getNext();
+            		if (grille == null)
+					{
+            			break;
+					}
                     cracker.applyGrille(grille);
-                }
+                    processedGrillsCount.getAndIncrement();
+            	}
                 this.workersCount.getAndDecrement();
             });
             workerThreads.add(workerThread);
@@ -86,20 +94,37 @@ public class TurningGrilleCrackerSyncless
             status.append(this.workersCount.get());
             status.append("; completion per thread: ");
             
-            Iterator<GrilleInterval> i = this.grilleIntervals.iterator();
-            while (i.hasNext())
+            boolean first = true;
+            for (Pair<AtomicLong, Long> intervalCompletion : this.grilleIntervalsCompletion)
             {
-            	GrilleInterval grilleInterval = i.next();
-            	status.append(String.format("%.1f", grilleInterval.calculateCompletion()));
-            	if (i.hasNext())
-            	{
-            		status.append("/");
-            	}
+                if (!first)
+                {
+                	status.append("/");
+                }
+                else
+                {
+                    first = false;
+                }
+
+                float completion = intervalCompletion.first.get() * 100.0f / intervalCompletion.second;
+                status.append(String.format("%.1f", completion));
             }
             status.append("% done");
             
             return status.toString();
         }
         return "";
+    }
+    
+    private static class Pair<F, S>
+    {
+    	public F first;
+    	public S second;
+    	
+    	public Pair(F first, S second)
+    	{
+    		this.first = first;
+    		this.second = second;
+    	}
     }
 }

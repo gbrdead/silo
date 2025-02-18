@@ -18,7 +18,7 @@ The resulting JAR is `target/silo-*.jar`.
 | syncless | queueless, with no synchronization overhead | yes | yes |
 | concurrent | [ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html) | mostly | no |
 | blocking | [ArrayBlockingQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ArrayBlockingQueue.html) | no | no |
-| textbook | a simple blocking bounded queue using ArrayDeque, ReentrantLock and Condition | no | no |
+| textbook | a simple blocking bounded queue using only Java SE (ArrayDeque, ReentrantLock and Condition) | no | no |
 
 ## Test results
 
@@ -37,4 +37,5 @@ Some remarks:
 - For higher hardware parallelism, the blocking implementations cannot utilize the CPUs at 100%. That shows high lock contention. No such problem is observed in the C++ blocking implementations.
 
 ## TODO
-Measure the performance of older versions of the JVM to determine whether it has improved in the recent past. The tests so far have been performed with Java 21.
+- Measure the performance of older versions of the JVM to determine whether it has improved in the recent past. The tests so far have been performed with Java 21.
+- Investigate the lock contention.

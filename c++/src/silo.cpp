@@ -21,7 +21,8 @@ inline static const std::string CIPHER_TEXT_PATH = "encrypted_msg.txt";
 static void heatCpu()
 {
     unsigned cpuCount = std::thread::hardware_concurrency();
-    std::list<std::thread> workerThreads;
+    std::vector<std::thread> workerThreads;
+    workerThreads.reserve(cpuCount);
 
     std::atomic<bool> stop(false);
 
@@ -70,6 +71,8 @@ int main(int argc, char *argv[])
         {
             arg = "syncless";
         }
+
+        heatCpu();
 
         std::unique_ptr<turning_grille::TurningGrilleCrackerImplDetails> crackerImplDetails;
         
@@ -152,7 +155,6 @@ int main(int argc, char *argv[])
         }
 
         turning_grille::TurningGrilleCracker cracker(cipherText, std::move(crackerImplDetails));
-        heatCpu();
         cracker.bruteForce();
 
         return 0;
