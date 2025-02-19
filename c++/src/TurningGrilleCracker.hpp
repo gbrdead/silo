@@ -92,10 +92,10 @@ private:
     unsigned producerCount;
     std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue;
 
-    std::atomic<unsigned> consumerCount;
+    std::atomic<int> consumerCount;			// This may get negative for a short while, so don't make it unsigned.
     moodycamel::ConcurrentQueue<std::thread> consumerThreads;
 
-    std::atomic<int> shutdownNConsumers;	// This may get negative, so don't make it unsigned.
+    std::atomic<int> shutdownNConsumers;	// This may get negative for a short while, so don't make it unsigned.
     int improving;
     bool addingThreads;
     uint64_t prevGrillesPerSecond;

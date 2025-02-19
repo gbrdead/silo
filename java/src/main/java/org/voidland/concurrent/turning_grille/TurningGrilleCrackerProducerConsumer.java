@@ -179,6 +179,7 @@ public class TurningGrilleCrackerProducerConsumer
             	Grille grille = portionQueue.retrievePortion();
             	if (grille == null)
             	{
+            		this.consumerCount.getAndDecrement();
             		break;
             	}
         
@@ -204,7 +205,6 @@ public class TurningGrilleCrackerProducerConsumer
 	                }
                 }
             }
-            this.consumerCount.getAndDecrement();
         });
         consumerThread.start();
         return consumerThread;

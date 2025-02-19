@@ -329,6 +329,7 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
                 	std::optional<Grille> grille = this->portionQueue->retrievePortion();
                 	if (!grille.has_value())
                 	{
+                		this->consumerCount--;
                 		break;
                 	}
 
@@ -337,9 +338,9 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
 
                     if (this->shutdownNConsumers > 0)
                     {
-						if (this->shutdownNConsumers.fetch_sub(1) > 0)
+						if (this->shutdownNConsumers-- > 0)
 						{
-							if (this->consumerCount.fetch_sub(1) > 1)		// There should be at least one consumer running.
+							if (this->consumerCount-- > 1)		// There should be at least one consumer running.
 							{
 								break;
 							}
@@ -354,7 +355,6 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
 						}
                     }
                 }
-                this->consumerCount--;
             }
         };
 }

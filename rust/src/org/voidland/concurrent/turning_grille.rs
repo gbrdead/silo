@@ -249,9 +249,9 @@ pub struct TurningGrilleCrackerProducerConsumer
     producerCount: usize,
     portionQueue: Arc<dyn MPMC_PortionQueue<Grille>>,
 
-    consumerCount: AtomicUsize,
+    consumerCount: AtomicIsize,         // This may get negative for a short while, so don't make it unsigned.
     consumerThreads: ConcurrentQueue<JoinHandle<()>>,
-    shutdownNConsumers: AtomicIsize    // This may get negative, so don't make it unsigned.
+    shutdownNConsumers: AtomicIsize     // This may get negative for a short while, so don't make it unsigned.
 }
 
 impl TurningGrilleCrackerImplDetails<ProducerConsumerMilestoneDetails> for TurningGrilleCrackerProducerConsumer
@@ -282,7 +282,7 @@ impl TurningGrilleCrackerImplDetails<ProducerConsumerMilestoneDetails> for Turni
         while cracker.grilleCountSoFar.load(Ordering::SeqCst) < cracker.grilleCount // Ensures all work is done and no more consumers will be started or stopped.
         {
         }
-        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::SeqCst));
+        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::SeqCst) as usize);
 
         loop
         {
@@ -307,7 +307,7 @@ impl TurningGrilleCrackerImplDetails<ProducerConsumerMilestoneDetails> for Turni
         if grillesPerSecond > milestoneState.bestGrillesPerSecond
         {
             milestoneState.bestGrillesPerSecond = grillesPerSecond;
-            milestoneState.bestConsumerCount = self.consumerCount.load(Ordering::SeqCst);
+            milestoneState.bestConsumerCount = self.consumerCount.load(Ordering::SeqCst) as usize;
         }
         
         if cracker.grilleCountSoFar.load(Ordering::SeqCst) < cracker.grilleCount
@@ -373,7 +373,7 @@ impl TurningGrilleCrackerProducerConsumer
             producerCount: producerCount,
             portionQueue: portionQueue,
 
-            consumerCount: AtomicUsize::new(0),
+            consumerCount: AtomicIsize::new(0),
             consumerThreads: ConcurrentQueue::<JoinHandle<()>>::unbounded(),
             shutdownNConsumers: AtomicIsize::new(0)
         }
@@ -440,6 +440,7 @@ impl TurningGrilleCrackerProducerConsumer
                     {
                         None =>
                         {
+                            self_.consumerCount.fetch_sub(1, Ordering::SeqCst);
                             break;    
                         }
                         Some(grille) =>
@@ -468,7 +469,6 @@ impl TurningGrilleCrackerProducerConsumer
                         }
                     }
                 }
-                self_.consumerCount.fetch_sub(1, Ordering::SeqCst);
             })
     }
 }
