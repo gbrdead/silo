@@ -84,8 +84,6 @@ public class Silo
                 arg = "syncless";
             }
             
-            Silo.heatCpu();
-
             TurningGrilleCrackerImplDetails crackerImplDetails;
             
             int cpuCount = Runtime.getRuntime().availableProcessors();
@@ -134,8 +132,9 @@ public class Silo
                     throw new IllegalArgumentException("Unexpected argument: " + arg);
                 }
             }
-            
+
             TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, crackerImplDetails);
+            Silo.heatCpu();
             cracker.bruteForce();
         }
         catch (Exception e)

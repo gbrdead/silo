@@ -72,8 +72,6 @@ int main(int argc, char *argv[])
             arg = "syncless";
         }
 
-        heatCpu();
-
         std::unique_ptr<turning_grille::TurningGrilleCrackerImplDetails> crackerImplDetails;
         
         unsigned cpuCount = std::thread::hardware_concurrency();
@@ -159,6 +157,7 @@ int main(int argc, char *argv[])
         }
 
         turning_grille::TurningGrilleCracker cracker(cipherText, std::move(crackerImplDetails));
+        heatCpu();
         cracker.bruteForce();
 
         return 0;

@@ -75,8 +75,6 @@ fn main()
         arg = "syncless";
     }
 
-    heatCpu();
-    
     let cpuCount: usize = available_parallelism().unwrap().get();
     match arg
     {
@@ -92,6 +90,8 @@ fn main()
                 Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
             let cracker: Arc<TurningGrilleCracker<ProducerConsumerMilestoneDetails>> =
                 Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+                
+            heatCpu();
             cracker.bruteForce();
         }
         "textbook" =>
@@ -105,6 +105,8 @@ fn main()
                 Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
             let cracker: Arc<TurningGrilleCracker<ProducerConsumerMilestoneDetails>> =
                 Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+
+            heatCpu();
             cracker.bruteForce();
         }
         "syncless" =>
@@ -113,6 +115,8 @@ fn main()
                 Box::new(TurningGrilleCrackerSyncless::new());
             let cracker: Arc<TurningGrilleCracker<SynclessMilestoneDetails>> =
                 Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+                
+            heatCpu();
             cracker.bruteForce();
         }
         "serial" =>
@@ -121,6 +125,8 @@ fn main()
                 Box::new(TurningGrilleCrackerSerial::new());
             let cracker: Arc<TurningGrilleCracker<SerialMilestoneDetails>> =
                 Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+                
+            heatCpu();
             cracker.bruteForce();
         }
         _ =>
