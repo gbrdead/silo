@@ -23,6 +23,21 @@ namespace org::voidland::concurrent::turning_grille
 {
 
 
+TurningGrilleCrackerImplDetails::~TurningGrilleCrackerImplDetails()
+{
+}
+
+std::string TurningGrilleCrackerImplDetails::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)
+{
+	return std::string();
+}
+
+std::string TurningGrilleCrackerImplDetails::milestonesSummary(TurningGrilleCracker& cracker)
+{
+	return std::string();
+}
+
+
 TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails) :
     cipherText(cipherText),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
@@ -80,7 +95,7 @@ void TurningGrilleCracker::bruteForce()
     }
 }
 
-void TurningGrilleCracker::applyGrille(const Grille& grille)
+uint64_t TurningGrilleCracker::applyGrille(const Grille& grille)
 {
     std::string candidateBuf;
     candidateBuf.reserve(this->cipherText.length());
@@ -103,7 +118,11 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
     std::reverse(candidateBuf.begin(), candidateBuf.end());
     this->findWordsAndReport(candidateBuf);
 
-    uint64_t grilleCountSoFar = ++this->grilleCountSoFar;
+    return ++this->grilleCountSoFar;
+}
+
+void TurningGrilleCracker::registerOneAppliedGrill(uint64_t grilleCountSoFar)
+{
     if (grilleCountSoFar % (this->grilleCount / 1000) == 0)   // A milestone every 0.1%.
     {
         std::chrono::steady_clock::time_point milestoneEnd = std::chrono::steady_clock::now();
@@ -112,14 +131,12 @@ void TurningGrilleCracker::applyGrille(const Grille& grille)
         {
         	std::lock_guard lock(this->milestoneReportMutex, std::adopt_lock);
 
-            if (milestoneEnd > this->milestoneStart  &&  grilleCountSoFar > this->grilleCountAtMilestoneStart)
+        	std::chrono::steady_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
+        	std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
+            if (elapsedTimeNs > 0)
             {
-                std::chrono::steady_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
                 uint64_t grilleCountForMilestone = grilleCountSoFar - this->grilleCountAtMilestoneStart;
-
-                std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
                 uint64_t grillesPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
-
                 if (grillesPerSecond > this->bestGrillesPerSecond)
                 {
                     this->bestGrillesPerSecond = grillesPerSecond;
@@ -312,11 +329,11 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
                 	std::optional<Grille> grille = this->portionQueue->retrievePortion();
                 	if (!grille.has_value())
                 	{
-                		this->consumerCount--;
                 		break;
                 	}
 
-                    cracker.applyGrille(*grille);
+                	uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
+                    cracker.registerOneAppliedGrill(grilleCountSoFar);
 
                     if (this->shutdownNConsumers > 0)
                     {
@@ -337,6 +354,7 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
 						}
                     }
                 }
+                this->consumerCount--;
             }
         };
 }
@@ -391,7 +409,10 @@ std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(Turnin
 						{
                 			break;
 						}
-                        cracker.applyGrille(*grille);
+
+                		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
+                        cracker.registerOneAppliedGrill(grilleCountSoFar);
+
                         (*processedGrillsCount)++;
                 	}
                     this->workersCount--;
@@ -434,18 +455,56 @@ std::string TurningGrilleCrackerSyncless::milestone(TurningGrilleCracker& cracke
 }
 
 
-TurningGrilleCrackerImplDetails::~TurningGrilleCrackerImplDetails()
+
+TurningGrilleCrackerSerial::TurningGrilleCrackerSerial()
 {
 }
 
-std::string TurningGrilleCrackerImplDetails::milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond)
+void TurningGrilleCrackerSerial::bruteForce(TurningGrilleCracker& cracker)
 {
-	return std::string();
-}
+	GrilleInterval grilleInterval(cracker.sideLength / 2, 0, cracker.grilleCount);
+	std::chrono::steady_clock::time_point milestoneStart = std::chrono::steady_clock::now();
+	uint64_t grilleCountAtMilestoneStart = 0;
 
-std::string TurningGrilleCrackerImplDetails::milestonesSummary(TurningGrilleCracker& cracker)
-{
-	return std::string();
+	while (true)
+	{
+		const Grille* grille = grilleInterval.getNext();
+		if (grille == nullptr)
+		{
+			break;
+		}
+
+		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
+
+        if (grilleCountSoFar % (cracker.grilleCount / 1000) == 0)   // A milestone every 0.1%.
+        {
+            std::chrono::steady_clock::time_point milestoneEnd = std::chrono::steady_clock::now();
+			std::chrono::steady_clock::duration elapsedTime = milestoneEnd - milestoneStart;
+			std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
+			if (elapsedTimeNs > 0)
+			{
+				uint64_t grilleCountForMilestone = grilleCountSoFar - grilleCountAtMilestoneStart;
+				uint64_t grillesPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
+				if (grillesPerSecond > cracker.bestGrillesPerSecond)
+				{
+					cracker.bestGrillesPerSecond = grillesPerSecond;
+				}
+
+				if (VERBOSE)
+				{
+					float done = grilleCountSoFar * 100.0 / cracker.grilleCount;
+
+					std::cerr << std::fixed << std::setprecision(1) << done << "% done; ";
+					std::cerr << "current speed: " << grillesPerSecond << " grilles/s; ";
+					std::cerr << "best speed so far: " << cracker.bestGrillesPerSecond << " grilles/s";
+					std::cerr << std::endl;
+				}
+
+				milestoneStart = milestoneEnd;
+				grilleCountAtMilestoneStart = grilleCountSoFar;
+            }
+        }
+	}
 }
 
 

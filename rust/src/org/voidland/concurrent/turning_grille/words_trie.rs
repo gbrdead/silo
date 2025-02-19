@@ -91,12 +91,18 @@ impl WordsTrie
 	fn addWord(parent: &mut TrieNode, mut ci: Chars)
 	{
 		let c: Option<char> = ci.next();
-		if c.is_none() 
-		{
-			parent.setWordEnd();
-			return;
-		}
-		let child: &mut TrieNode = parent.getOrCreateChild(c.unwrap());
+        let child: &mut TrieNode = match c
+        {
+            None =>
+            {
+                parent.setWordEnd();
+                return;
+            }
+            Some(c) =>
+            {
+                parent.getOrCreateChild(c)
+            }
+        };
 		Self::addWord(child, ci);
 	}
 	

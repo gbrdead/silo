@@ -48,6 +48,7 @@ class TurningGrilleCracker
 {
 	friend class TurningGrilleCrackerProducerConsumer;
 	friend class TurningGrilleCrackerSyncless;
+	friend class TurningGrilleCrackerSerial;
 
 private:
     inline static const std::string WORDS_FILE_PATH = "3000words.txt";
@@ -77,8 +78,9 @@ public:
     void bruteForce();
 
 private:
-    void applyGrille(const Grille& grill);
+    uint64_t applyGrille(const Grille& grill);
     void findWordsAndReport(const std::string& candidate);
+    void registerOneAppliedGrill(uint64_t grilleCountSoFar);
 };
 
 
@@ -129,6 +131,16 @@ public:
 
 private:
     std::vector<std::thread> startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
+};
+
+
+class TurningGrilleCrackerSerial :
+		public TurningGrilleCrackerImplDetails
+{
+public:
+    TurningGrilleCrackerSerial();
+
+    void bruteForce(TurningGrilleCracker& cracker);
 };
 
 

@@ -1,10 +1,10 @@
-# Silo - a multi-threading performance test, comparing C++, Java and Rust 
+# Silo - a multi-threading performance test, comparing C++, Rust and Java
 
 This project compares the multi-threading performance of the following runtimes:
 
 - [C++/native](c++/README.md)
-- [Java/JVM](java/README.md)
 - [Rust/native](rust/README.md)
+- [Java/JVM](java/README.md)
 
 The test results and conclusions are at the bottom.  
 ***Note: the measurements are still in progress.***
@@ -88,7 +88,7 @@ Intel Core i5-10210U
 | runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
 | **C++/native** | 1397 | 1263 | 1032 |
-| **Rust/native** |  |  |  |
+| **Rust/native** | 1424 | 1272 | 654 |
 | **Java/JVM** | 821 | 659 | 572 |
 
 AMD Ryzen 7735HS
@@ -96,8 +96,16 @@ AMD Ryzen 7735HS
 | runtime / scenario implementation | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
 | **C++/native** | 3582 | 3017 | 1487 |
-| **Rust/native** |  |  |  |
+| **Rust/native** | 3974 | 3017 | 747 |
 | **Java/JVM** | 1770 | 1951 | 1068 |
+
+Sigle-core single-thread per GHz
+
+| CPU / runtime | C++ | Rust | Java |
+|---|---|---|---|
+| Intel Core i5-4210M |  |  |  |
+| Intel Core i5-10210U |  |  |  |
+| AMD Ryzen 7735HS |  |  |  |
 
 ---
 
@@ -114,5 +122,5 @@ Conclusions:
 
 Language/runtime-specific results:
 - [C++ results and conslusions](c++/README.md)
-- [Java results and conslusions](java/README.md)
 - [Rust results and conslusions](rust/README.md)
+- [Java results and conslusions](java/README.md)

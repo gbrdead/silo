@@ -42,8 +42,8 @@ pub trait TurningGrilleCrackerImplDetails<M> : Send + Sync
 struct TurningGrilleCrackerUnsync<M>
 {
     grilleCountAtMilestoneStart: u64,
-    start: Option<Instant>,
-    milestoneStart: Option<Instant>,
+    start: Instant,
+    milestoneStart: Instant,
     bestGrillesPerSecond: u64,
     milestoneState: M
 }
@@ -103,8 +103,8 @@ impl<M> TurningGrilleCracker<M>
             milestoneReportMutex: Mutex::new(TurningGrilleCrackerUnsync
                 {
                     grilleCountAtMilestoneStart: 0,
-                    start: None,
-                    milestoneStart: None,
+                    start: Instant::now(),
+                    milestoneStart: Instant::now(),
                     bestGrillesPerSecond: 0,
                     milestoneState: implDetails.takeMilestoneState()
                 }),
@@ -116,7 +116,7 @@ impl<M> TurningGrilleCracker<M>
     {
         {
             let mut selfUnsync = self.milestoneReportMutex.lock().unwrap();
-            selfUnsync.start = Some(Instant::now());
+            selfUnsync.start = Instant::now();
             selfUnsync.milestoneStart = selfUnsync.start;
         }
         
@@ -125,7 +125,7 @@ impl<M> TurningGrilleCracker<M>
         {
             let mut selfUnsync = self.milestoneReportMutex.lock().unwrap();
             let end: Instant = Instant::now();
-            let elapsedTimeNs: u128 = end.duration_since(selfUnsync.start.unwrap()).as_nanos();
+            let elapsedTimeNs: u128 = end.duration_since(selfUnsync.start).as_nanos();
             let grillsPerSecond: u64 = ((self.grilleCount as u128 * Duration::from_secs(1).as_nanos()) / elapsedTimeNs) as u64;
             
             eprint!("Average speed: {} grilles/s; best speed: {} grilles/s", grillsPerSecond, selfUnsync.bestGrillesPerSecond);
@@ -143,7 +143,7 @@ impl<M> TurningGrilleCracker<M>
         }
     }
     
-    fn applyGrille(self: &Arc<Self>, grille: &Grille)
+    fn applyGrille(self: &Arc<Self>, grille: &Grille) -> u64
     {
         let cipherTextLength: usize = self.cipherText.len();
         let mut candidateBuf: String = String::with_capacity(cipherTextLength);
@@ -170,8 +170,12 @@ impl<M> TurningGrilleCracker<M>
             candidateRevBuf.push(c);
         }
         self.findWordsAndReport(&candidateRevBuf);
+        
+        self.grilleCountSoFar.fetch_add(1, Ordering::SeqCst) + 1
+    }
 
-        let grilleCountSoFar:u64 = self.grilleCountSoFar.fetch_add(1, Ordering::SeqCst) + 1;
+    fn registerOneAppliedGrill(self: &Arc<Self>, grilleCountSoFar:u64)
+    {
         if grilleCountSoFar % (self.grilleCount / 1000) == 0   // A milestone every 0.1%.
         {
             let milestoneEnd: Instant = Instant::now();
@@ -181,35 +185,36 @@ impl<M> TurningGrilleCracker<M>
             {
                 let mut selfUnsync = milestoneReportTryLock.unwrap();
                 
-                let elapsedTime: Duration = milestoneEnd.duration_since(selfUnsync.milestoneStart.unwrap());
-                let grilleCountForMilestone: u64 = grilleCountSoFar - selfUnsync.grilleCountAtMilestoneStart;
-
+                let elapsedTime: Duration = milestoneEnd.duration_since(selfUnsync.milestoneStart);
                 let elapsedTimeNs:u128 = elapsedTime.as_nanos();
-                let grillesPerSecond: u64 = (grilleCountForMilestone as u128 * Duration::from_secs(1).as_nanos() / elapsedTimeNs) as u64;
-                
-                if grillesPerSecond > selfUnsync.bestGrillesPerSecond
+                if elapsedTimeNs > 0
                 {
-                    selfUnsync.bestGrillesPerSecond = grillesPerSecond;
-                }
-                
-                let milestoneStatus: String = self.implDetails.clone().milestone(self, &mut selfUnsync.milestoneState, grillesPerSecond);
-                
-                if self.VERBOSE
-                {
-                    let done: f32 = grilleCountSoFar as f32 * 100.0 / self.grilleCount as f32;
-
-                    eprint!("{:.1}% done; ", done);
-                    eprint!("current speed: {} grilles/s; ", grillesPerSecond);
-                    eprint!("best speed so far: {} grilles/s", selfUnsync.bestGrillesPerSecond);
-                    if !milestoneStatus.is_empty()
+                    let grilleCountForMilestone: u64 = grilleCountSoFar - selfUnsync.grilleCountAtMilestoneStart;
+                    let grillesPerSecond: u64 = (grilleCountForMilestone as u128 * Duration::from_secs(1).as_nanos() / elapsedTimeNs) as u64;
+                    if grillesPerSecond > selfUnsync.bestGrillesPerSecond
                     {
-                        eprint!("; {}", milestoneStatus);
+                        selfUnsync.bestGrillesPerSecond = grillesPerSecond;
                     }
-                    eprintln!();
+                    
+                    let milestoneStatus: String = self.implDetails.clone().milestone(self, &mut selfUnsync.milestoneState, grillesPerSecond);
+                    
+                    if self.VERBOSE
+                    {
+                        let done: f32 = grilleCountSoFar as f32 * 100.0 / self.grilleCount as f32;
+    
+                        eprint!("{:.1}% done; ", done);
+                        eprint!("current speed: {} grilles/s; ", grillesPerSecond);
+                        eprint!("best speed so far: {} grilles/s", selfUnsync.bestGrillesPerSecond);
+                        if !milestoneStatus.is_empty()
+                        {
+                            eprint!("; {}", milestoneStatus);
+                        }
+                        eprintln!();
+                    }
+                    
+                    selfUnsync.milestoneStart = milestoneEnd;
+                    selfUnsync.grilleCountAtMilestoneStart = grilleCountSoFar;
                 }
-                
-                selfUnsync.milestoneStart = Some(milestoneEnd);
-                selfUnsync.grilleCountAtMilestoneStart = grilleCountSoFar;
             }
         }
     }
@@ -391,11 +396,17 @@ impl TurningGrilleCrackerProducerConsumer
                     loop
                     {
                         let grille: Option<Grille> = grilleInterval.cloneNext();
-                        if grille.is_none()
+                        match grille
                         {
-                            break;    
-                        }
-                        portionQueue.addPortion(grille.unwrap());
+                            None =>
+                            {
+                                break;    
+                            }
+                            Some(grille) =>
+                            {
+                                portionQueue.addPortion(grille);
+                            }
+                        };
                     }
                 }));
                 
@@ -425,13 +436,18 @@ impl TurningGrilleCrackerProducerConsumer
                 loop
                 {
                     let grille: Option<Grille> = portionQueue.retrievePortion();
-                    if grille.is_none()
+                    let grilleCountSoFar:u64 = match grille
                     {
-                        self_.consumerCount.fetch_sub(1, Ordering::SeqCst);
-                        break;    
-                    }
-                    
-                    cracker.applyGrille(&grille.unwrap());
+                        None =>
+                        {
+                            break;    
+                        }
+                        Some(grille) =>
+                        {
+                            cracker.applyGrille(&grille)
+                        }
+                    };
+                    cracker.registerOneAppliedGrill(grilleCountSoFar);
                     
                     if self_.shutdownNConsumers.load(Ordering::SeqCst) > 0
                     {
@@ -452,6 +468,7 @@ impl TurningGrilleCrackerProducerConsumer
                         }
                     }
                 }
+                self_.consumerCount.fetch_sub(1, Ordering::SeqCst);
             })
     }
 }
@@ -558,11 +575,19 @@ impl TurningGrilleCrackerSyncless
                     loop
                     {
                         let grille: Option<&Grille> = grilleInterval.getNext();
-                        if grille.is_none()
+                        let grilleCountSoFar:u64 = match grille
                         {
-                            break;    
-                        }
-                        cracker.applyGrille(grille.unwrap());
+                            None =>
+                            {
+                                break;    
+                            }
+                            Some(grille) =>
+                            {
+                                cracker.applyGrille(grille)
+                            }
+                        };
+                        cracker.registerOneAppliedGrill(grilleCountSoFar);
+                        
                         processedGrillsCount.fetch_add(1, Ordering::SeqCst);
                     }
                     self_.workersCount.fetch_sub(1, Ordering::SeqCst);
@@ -572,5 +597,92 @@ impl TurningGrilleCrackerSyncless
         }
         
         workerThreads
+    }
+}
+
+
+
+pub struct SerialMilestoneDetails
+{
+}
+
+pub struct TurningGrilleCrackerSerial
+{
+}
+
+impl TurningGrilleCrackerImplDetails<SerialMilestoneDetails> for TurningGrilleCrackerSerial
+{
+    fn takeMilestoneState(&self) -> SerialMilestoneDetails
+    {
+        SerialMilestoneDetails
+        {
+        }
+    }
+
+    fn bruteForce(self: Arc<Self>, cracker: &Arc<TurningGrilleCracker<SerialMilestoneDetails>>)
+    {
+        let mut grilleInterval: GrilleInterval = GrilleInterval::new(cracker.sideLength / 2, 0, cracker.grilleCount);
+        let mut milestoneStart: Instant = Instant::now();
+        let mut grilleCountAtMilestoneStart:u64 = 0;
+        let mut bestGrillesPerSecond: u64 = 0;
+        
+        loop
+        {
+            let grille: Option<&Grille> = grilleInterval.getNext();
+            let grilleCountSoFar:u64 = match grille
+            {
+                None =>
+                {
+                    break;    
+                }
+                Some(grille) =>
+                {
+                    cracker.applyGrille(grille)
+                }
+            };
+            
+            if grilleCountSoFar % (cracker.grilleCount / 1000) == 0   // A milestone every 0.1%.
+            {
+                let milestoneEnd: Instant = Instant::now();
+                let elapsedTime: Duration = milestoneEnd.duration_since(milestoneStart);
+                let elapsedTimeNs:u128 = elapsedTime.as_nanos();
+                if elapsedTimeNs > 0
+                {
+                    let grilleCountForMilestone: u64 = grilleCountSoFar - grilleCountAtMilestoneStart;
+                    let grillesPerSecond: u64 = (grilleCountForMilestone as u128 * Duration::from_secs(1).as_nanos() / elapsedTimeNs) as u64;
+                    if grillesPerSecond > bestGrillesPerSecond
+                    {
+                        bestGrillesPerSecond = grillesPerSecond;
+                    }
+                    
+                    if cracker.VERBOSE
+                    {
+                        let done: f32 = grilleCountSoFar as f32 * 100.0 / cracker.grilleCount as f32;
+
+                        eprint!("{:.1}% done; ", done);
+                        eprint!("current speed: {} grilles/s; ", grillesPerSecond);
+                        eprint!("best speed so far: {} grilles/s", bestGrillesPerSecond);
+                        eprintln!();
+                    }
+                    
+                    milestoneStart = milestoneEnd;
+                    grilleCountAtMilestoneStart = grilleCountSoFar;
+                }                
+            }
+        }
+        {
+            let mut crackerUnsync = cracker.milestoneReportMutex.lock().unwrap();
+            crackerUnsync.bestGrillesPerSecond = bestGrillesPerSecond;
+        }
+    }
+}
+
+impl TurningGrilleCrackerSerial
+{
+    pub fn new() -> Self
+    {
+        Self
+        {
+        }
     }
 }

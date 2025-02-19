@@ -69,7 +69,10 @@ public class TurningGrilleCrackerSyncless
 					{
             			break;
 					}
-                    cracker.applyGrille(grille);
+            		
+            		long grilleCountSoFar = cracker.applyGrille(grille);
+                    cracker.registerOneAppliedGrill(grilleCountSoFar);
+                    
                     processedGrillsCount.getAndIncrement();
             	}
                 this.workersCount.getAndDecrement();

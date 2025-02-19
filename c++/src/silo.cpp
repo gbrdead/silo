@@ -149,6 +149,10 @@ int main(int argc, char *argv[])
         {
             crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerSyncless>();
         }
+        else if (arg == "serial")
+        {
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerSerial>();
+        }
         else
         {
             throw std::invalid_argument("Unexpected argument: " + arg);

@@ -18,6 +18,7 @@ import org.voidland.concurrent.turning_grille.Grille;
 import org.voidland.concurrent.turning_grille.TurningGrilleCracker;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerImplDetails;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerProducerConsumer;
+import org.voidland.concurrent.turning_grille.TurningGrilleCrackerSerial;
 import org.voidland.concurrent.turning_grille.TurningGrilleCrackerSyncless;
 
 
@@ -121,6 +122,11 @@ public class Silo
                 case "syncless":
                 {
                 	crackerImplDetails = new TurningGrilleCrackerSyncless();
+                    break;
+                }
+                case "serial":
+                {
+                	crackerImplDetails = new TurningGrilleCrackerSerial();
                     break;
                 }
                 default:

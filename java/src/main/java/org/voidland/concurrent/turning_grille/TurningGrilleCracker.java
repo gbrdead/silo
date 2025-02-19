@@ -28,7 +28,7 @@ public class TurningGrilleCracker
     
     private long grilleCountAtMilestoneStart;
     private long milestoneStart;
-    private long bestGrillesPerSecond;
+    long bestGrillesPerSecond;
     
     private TurningGrilleCrackerImplDetails implDetails;
 
@@ -87,7 +87,7 @@ public class TurningGrilleCracker
         }        
     }
     
-    void applyGrille(Grille grill)
+    long applyGrille(Grille grill)
     {
         StringBuilder candidateBuf = new StringBuilder(this.cipherText.length);
         
@@ -109,7 +109,11 @@ public class TurningGrilleCracker
         candidateBuf.reverse();
         this.findWordsAndReport(candidateBuf);
         
-        long grilleCountSoFar = this.grilleCountSoFar.incrementAndGet();
+        return this.grilleCountSoFar.incrementAndGet();
+    }
+    
+    void registerOneAppliedGrill(long grilleCountSoFar)
+    {
         if (grilleCountSoFar % (this.grilleCount / 1000) == 0)   // A milestone every 0.1%.
         {
             long milestoneEnd = System.nanoTime();
@@ -118,13 +122,11 @@ public class TurningGrilleCracker
             {
             	try
             	{
-	                if (milestoneEnd > this.milestoneStart  &&  grilleCountSoFar > this.grilleCountAtMilestoneStart)
-	                {
-	                    long elapsedTimeNs = milestoneEnd - this.milestoneStart;
+                    long elapsedTimeNs = milestoneEnd - this.milestoneStart;
+                    if (elapsedTimeNs > 0)
+                    {
 	                    long grilleCountForMilestone = grilleCountSoFar - this.grilleCountAtMilestoneStart;
-	                    
 	                    long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
-	        
 	                    if (grillesPerSecond > this.bestGrillesPerSecond)
 	                    {
 	                        this.bestGrillesPerSecond = grillesPerSecond;

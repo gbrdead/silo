@@ -27,9 +27,9 @@ The resulting executable is `target/release/silo`.
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| syncless |  | |  |
-| concurrent |  |  |  |
-| textbook |  |  |  |
+| syncless |  | 1424 | 3974 |
+| concurrent |  | 1272 | 3017 |
+| textbook |  | 654 | 747 |
 
 General results:
 - Rust is on par with C++ for non-blocking implementations.

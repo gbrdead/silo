@@ -15,6 +15,8 @@ use org::voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsu
 use org::voidland::concurrent::turning_grille::ProducerConsumerMilestoneDetails;
 use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSyncless;
 use org::voidland::concurrent::turning_grille::SynclessMilestoneDetails;
+use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSerial;
+use org::voidland::concurrent::turning_grille::SerialMilestoneDetails;
 
 use std::fs::read_to_string;
 use std::string::String;
@@ -110,6 +112,14 @@ fn main()
             let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<SynclessMilestoneDetails>> =
                 Box::new(TurningGrilleCrackerSyncless::new());
             let cracker: Arc<TurningGrilleCracker<SynclessMilestoneDetails>> =
+                Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+            cracker.bruteForce();
+        }
+        "serial" =>
+        {
+            let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<SerialMilestoneDetails>> =
+                Box::new(TurningGrilleCrackerSerial::new());
+            let cracker: Arc<TurningGrilleCracker<SerialMilestoneDetails>> =
                 Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
             cracker.bruteForce();
         }
