@@ -111,7 +111,6 @@ Sigle-core single-thread per GHz
 
 General results:
 - Statically-optimized native code is about 1.5-2 times faster than dynamically-optimized JIT-compiled code. In short: C++ and Rust are significantly faster than Java for general purpose calculations.
-- The single-core performance per GHz has stayed pretty constant for an entire decade.
 - Non-blocking queues perform much better than blocking ones.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
 
