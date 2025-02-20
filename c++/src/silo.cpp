@@ -108,22 +108,6 @@ int main(int argc, char *argv[])
             		std::make_unique<queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount, std::move(nonBlockingQueue));
             crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
         }
-        else if (arg == "sync_bounded")
-        {
-            unsigned initialConsumerCount = cpuCount * 3;
-            unsigned producerCount = cpuCount;
-
-            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount,
-            		std::make_unique<queue::SyncBoundedPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount));
-        }
-        else if (arg == "textbook")
-        {
-            unsigned initialConsumerCount = cpuCount * 3;
-            unsigned producerCount = cpuCount;
-
-            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount,
-            		std::make_unique<queue::TextbookPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount));
-        }
         else if (arg == "onetbb")
         {
             unsigned initialConsumerCount = cpuCount * 3;
@@ -142,6 +126,22 @@ int main(int argc, char *argv[])
 
             crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount,
             		std::make_unique<queue::OneTBB_BoundedPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount));
+        }
+        else if (arg == "sync_bounded")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount,
+            		std::make_unique<queue::SyncBoundedPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount));
+        }
+        else if (arg == "textbook")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount,
+            		std::make_unique<queue::TextbookPortionQueue<turning_grille::Grille>>(initialConsumerCount, producerCount));
         }
         else if (arg == "syncless")
         {

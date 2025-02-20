@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.voidland.concurrent.Silo;
 import org.voidland.concurrent.queue.MPMC_PortionQueue;
@@ -21,6 +23,7 @@ public class TurningGrilleCrackerProducerConsumer
     private ConcurrentLinkedQueue<Thread> consumerThreads;
     private AtomicInteger shutdownNConsumers;
     
+    private Lock milestoneReportMutex;
     private int improving;
     private boolean addingThreads;
     long prevGrillesPerSecond;
@@ -33,15 +36,18 @@ public class TurningGrilleCrackerProducerConsumer
     {
         this.initialConsumerCount = initialConsumerCount;
         this.producerCount = producerCount;
-        this.consumerCount = new AtomicInteger(0);
         this.portionQueue = portionQueue;
+        
+        this.consumerCount = new AtomicInteger(0);
+        this.consumerThreads = new ConcurrentLinkedQueue<>();
         this.shutdownNConsumers = new AtomicInteger(0);
+        
+        this.improving = 0;
         this.addingThreads = true;
         this.prevGrillesPerSecond = 0;
-        this.bestGrillesPerSecond = this.prevGrillesPerSecond;
         this.bestConsumerCount = 0;
-        this.consumerThreads = new ConcurrentLinkedQueue<>();
-        this.improving = 0;
+        this.bestGrillesPerSecond = 0;
+        this.milestoneReportMutex = new ReentrantLock(false);
     }
 
     @Override
@@ -74,53 +80,69 @@ public class TurningGrilleCrackerProducerConsumer
     }
     
     @Override
-    public String milestone(TurningGrilleCracker cracker, long grillesPerSecond)
+    public void tryMilestone(TurningGrilleCracker cracker, long milestoneEnd, long grilleCountSoFar)
     {
-        int queueSize = this.portionQueue.getSize();
-
-        if (grillesPerSecond > this.bestGrillesPerSecond)
-        {
-            this.bestGrillesPerSecond = grillesPerSecond;
-            this.bestConsumerCount = this.consumerCount.get();
-        }
-
-        if (cracker.grilleCountSoFar.get() < cracker.grilleCount)
-        {
-            if (grillesPerSecond < this.prevGrillesPerSecond)
-            {
-                this.improving--;
-            }
-            else if (grillesPerSecond > this.prevGrillesPerSecond)
-            {
-                this.improving++;
-            }
-    
-            if (this.improving >= 1 || this.improving <= -2)
-            {
-                if (this.improving < 0)
-                {
-                    this.addingThreads = !this.addingThreads;
-                }
-                this.improving = 0;
-    
-                if (this.addingThreads)
-                {
-                    this.consumerThreads.add(this.startConsumerThread(cracker));
-                }
-                else
-                {
-                    this.shutdownNConsumers.getAndIncrement();
-                }
-            }
-    
-            this.prevGrillesPerSecond = grillesPerSecond;
-        }
-
-        if (Silo.VERBOSE)
-        {
-            return "consumer threads: " + this.consumerCount.get() + "; queue size: " + queueSize + " / " + this.portionQueue.getMaxSize();
-        }
-        return "";
+    	if (this.milestoneReportMutex.tryLock())
+    	{
+    		try
+    		{
+		        int queueSize = this.portionQueue.getSize();
+		        
+		        String milestoneStatus = "";
+		        if (Silo.VERBOSE)
+		        {
+		            milestoneStatus = "consumer threads: " + this.consumerCount.get() + "; queue size: " + queueSize + " / " + this.portionQueue.getMaxSize();
+		        }
+		        
+		        Long grillesPerSecond = cracker.milestone(milestoneEnd, grilleCountSoFar, milestoneStatus);
+		        if (grillesPerSecond == null)
+		        {
+		        	return;
+		        }
+		
+		        if (grillesPerSecond > this.bestGrillesPerSecond)
+		        {
+		            this.bestGrillesPerSecond = grillesPerSecond;
+		            this.bestConsumerCount = this.consumerCount.get();
+		        }
+		
+		        if (cracker.grilleCountSoFar.get() < cracker.grilleCount)
+		        {
+		            if (grillesPerSecond < this.prevGrillesPerSecond)
+		            {
+		                this.improving--;
+		            }
+		            else if (grillesPerSecond > this.prevGrillesPerSecond)
+		            {
+		                this.improving++;
+		            }
+		    
+		            if (this.improving >= 1 || this.improving <= -2)
+		            {
+		                if (this.improving < 0)
+		                {
+		                    this.addingThreads = !this.addingThreads;
+		                }
+		                this.improving = 0;
+		    
+		                if (this.addingThreads)
+		                {
+		                    this.consumerThreads.add(this.startConsumerThread(cracker));
+		                }
+		                else
+		                {
+		                    this.shutdownNConsumers.getAndIncrement();
+		                }
+		            }
+		    
+		            this.prevGrillesPerSecond = grillesPerSecond;
+		        }
+    		}
+    		finally
+    		{
+    			this.milestoneReportMutex.unlock();
+    		}
+    	}
     }
     
     @Override

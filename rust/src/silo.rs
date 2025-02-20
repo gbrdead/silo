@@ -12,11 +12,8 @@ use org::voidland::concurrent::turning_grille::Grille;
 use org::voidland::concurrent::turning_grille::TurningGrilleCracker;
 use org::voidland::concurrent::turning_grille::TurningGrilleCrackerImplDetails;
 use org::voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer;
-use org::voidland::concurrent::turning_grille::ProducerConsumerMilestoneDetails;
 use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSyncless;
-use org::voidland::concurrent::turning_grille::SynclessMilestoneDetails;
 use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSerial;
-use org::voidland::concurrent::turning_grille::SerialMilestoneDetails;
 
 use std::fs::read_to_string;
 use std::string::String;
@@ -74,6 +71,8 @@ fn main()
     {
         arg = "syncless";
     }
+    
+    let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails>;
 
     let cpuCount: usize = available_parallelism().unwrap().get();
     match arg
@@ -86,13 +85,7 @@ fn main()
             let nonBlockingQueue: Box<dyn NonBlockingQueue<Grille>> = Box::new(ConcurrentPortionQueue::<Grille>::new());
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
                 Arc::new(MostlyNonBlockingPortionQueue::new(initialConsumerCount, producerCount, nonBlockingQueue));
-            let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<ProducerConsumerMilestoneDetails>> =
-                Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
-            let cracker: Arc<TurningGrilleCracker<ProducerConsumerMilestoneDetails>> =
-                Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
-                
-            heatCpu();
-            cracker.bruteForce();
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook" =>
         {
@@ -101,37 +94,23 @@ fn main()
 
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
                 Arc::new(TextbookPortionQueue::new(initialConsumerCount, producerCount));
-            let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<ProducerConsumerMilestoneDetails>> =
-                Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
-            let cracker: Arc<TurningGrilleCracker<ProducerConsumerMilestoneDetails>> =
-                Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
-
-            heatCpu();
-            cracker.bruteForce();
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "syncless" =>
         {
-            let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<SynclessMilestoneDetails>> =
-                Box::new(TurningGrilleCrackerSyncless::new());
-            let cracker: Arc<TurningGrilleCracker<SynclessMilestoneDetails>> =
-                Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
-                
-            heatCpu();
-            cracker.bruteForce();
+            crackerImplDetails = Box::new(TurningGrilleCrackerSyncless::new());
         }
         "serial" =>
         {
-            let crackerImplDetails: Box<dyn TurningGrilleCrackerImplDetails<SerialMilestoneDetails>> =
-                Box::new(TurningGrilleCrackerSerial::new());
-            let cracker: Arc<TurningGrilleCracker<SerialMilestoneDetails>> =
-                Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
-                
-            heatCpu();
-            cracker.bruteForce();
+            crackerImplDetails = Box::new(TurningGrilleCrackerSerial::new());
         }
         _ =>
         {
             panic!("Unexpected argument: {}", arg);
         }
     }
+    
+    let cracker: Arc<TurningGrilleCracker> = Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+    heatCpu();
+    cracker.bruteForce();
 }

@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.voidland.concurrent.Silo;
 
@@ -13,6 +15,8 @@ public class TurningGrilleCrackerSyncless
         implements TurningGrilleCrackerImplDetails
 {
 	private AtomicInteger workersCount;
+	
+    private Lock milestoneReportMutex;
 	private List<Pair<AtomicLong, Long>> grilleIntervalsCompletion;
 	
 	
@@ -20,6 +24,7 @@ public class TurningGrilleCrackerSyncless
         throws IOException
     {
         this.workersCount = new AtomicInteger(0);
+        this.milestoneReportMutex = new ReentrantLock(false);
     }
 
     @Override
@@ -87,36 +92,48 @@ public class TurningGrilleCrackerSyncless
     }
     
     @Override
-    public String milestone(TurningGrilleCracker cracker, long grillesPerSecond)
+    public void tryMilestone(TurningGrilleCracker cracker, long milestoneEnd, long grilleCountSoFar)
     {
-        if (Silo.VERBOSE)
-        {
-            StringBuilder status = new StringBuilder();
-            
-            status.append("worker threads: ");
-            status.append(this.workersCount.get());
-            status.append("; completion per thread: ");
-            
-            boolean first = true;
-            for (Pair<AtomicLong, Long> intervalCompletion : this.grilleIntervalsCompletion)
-            {
-                if (!first)
-                {
-                	status.append("/");
-                }
-                else
-                {
-                    first = false;
-                }
-
-                float completion = intervalCompletion.first.get() * 100.0f / intervalCompletion.second;
-                status.append(String.format("%.1f", completion));
-            }
-            status.append("% done");
-            
-            return status.toString();
-        }
-        return "";
+    	if (this.milestoneReportMutex.tryLock())
+    	{
+    		try
+    		{
+    			String milestoneStatus = "";
+		        if (Silo.VERBOSE)
+		        {
+		            StringBuilder status = new StringBuilder();
+		            
+		            status.append("worker threads: ");
+		            status.append(this.workersCount.get());
+		            status.append("; completion per thread: ");
+		            
+		            boolean first = true;
+		            for (Pair<AtomicLong, Long> intervalCompletion : this.grilleIntervalsCompletion)
+		            {
+		                if (!first)
+		                {
+		                	status.append("/");
+		                }
+		                else
+		                {
+		                    first = false;
+		                }
+		
+		                float completion = intervalCompletion.first.get() * 100.0f / intervalCompletion.second;
+		                status.append(String.format("%.1f", completion));
+		            }
+		            status.append("% done");
+		            
+		            milestoneStatus = status.toString();
+		        }
+		        
+		        cracker.milestone(milestoneEnd, grilleCountSoFar, milestoneStatus);
+    		}
+    		finally
+    		{
+    			this.milestoneReportMutex.unlock();
+    		}
+    	}
     }
     
     private static class Pair<F, S>

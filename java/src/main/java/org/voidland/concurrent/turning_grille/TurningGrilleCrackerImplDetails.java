@@ -5,10 +5,7 @@ public interface TurningGrilleCrackerImplDetails
 {
 	void bruteForce(TurningGrilleCracker cracker);
 	
-	default String milestone(TurningGrilleCracker cracker, long grillesPerSecond)
-	{
-		return "";
-	}
+	void tryMilestone(TurningGrilleCracker cracker, long milestoneEnd, long grilleCountSoFar);
 	
 	default String milestonesSummary(TurningGrilleCracker cracker)
 	{

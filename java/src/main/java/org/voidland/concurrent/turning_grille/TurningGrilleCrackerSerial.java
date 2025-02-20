@@ -60,4 +60,10 @@ public class TurningGrilleCrackerSerial
             }
     	}
     }
+    
+    @Override
+    public void tryMilestone(TurningGrilleCracker cracker, long milestoneEnd, long grilleCountSoFar)
+    {
+    	cracker.milestone(milestoneEnd, grilleCountSoFar, "");
+    }
 }

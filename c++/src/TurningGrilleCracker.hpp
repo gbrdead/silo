@@ -12,6 +12,7 @@
 #include <memory>
 #include <atomic>
 #include <vector>
+#include <optional>
 #include "concurrentqueue/concurrentqueue.h"
 
 using namespace org::voidland::concurrent;
@@ -39,7 +40,7 @@ public:
 
 	virtual void bruteForce(TurningGrilleCracker& cracker) = 0;
 
-	virtual std::string milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond);
+	virtual void tryMilestone(TurningGrilleCracker& cracker, const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar) = 0;
 	virtual std::string milestonesSummary(TurningGrilleCracker& cracker);
 };
 
@@ -62,7 +63,6 @@ private:
     std::string cipherText;
     WordsTrie wordsTrie;
 
-    std::mutex milestoneReportMutex;
     std::chrono::steady_clock::time_point start;
 
     uint64_t grilleCountAtMilestoneStart;
@@ -81,6 +81,7 @@ private:
     uint64_t applyGrille(const Grille& grill);
     void findWordsAndReport(const std::string& candidate);
     void registerOneAppliedGrill(uint64_t grilleCountSoFar);
+    std::optional<uint64_t> milestone(const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar, const std::string& milestoneDetailsStatus);
 };
 
 
@@ -94,8 +95,9 @@ private:
 
     std::atomic<int> consumerCount;			// This may get negative for a short while, so don't make it unsigned.
     moodycamel::ConcurrentQueue<std::thread> consumerThreads;
-
     std::atomic<int> shutdownNConsumers;	// This may get negative for a short while, so don't make it unsigned.
+
+    std::mutex milestoneStateMutex;
     int improving;
     bool addingThreads;
     uint64_t prevGrillesPerSecond;
@@ -106,7 +108,7 @@ public:
     TurningGrilleCrackerProducerConsumer(unsigned initialConsumerCount, unsigned producerCount, std::unique_ptr<queue::MPMC_PortionQueue<Grille>> portionQueue);
 
     void bruteForce(TurningGrilleCracker& cracker);
-    std::string milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond);
+	void tryMilestone(TurningGrilleCracker& cracker, const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar);
     std::string milestonesSummary(TurningGrilleCracker& cracker);
 
 private:
@@ -121,13 +123,15 @@ class TurningGrilleCrackerSyncless :
 {
 private:
 	std::atomic<unsigned> workersCount;
+
+	std::mutex milestoneStateMutex;
 	std::vector<std::pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>> grilleIntervalsCompletion;
 
 public:
     TurningGrilleCrackerSyncless();
 
     void bruteForce(TurningGrilleCracker& cracker);
-    std::string milestone(TurningGrilleCracker& cracker, uint64_t grillesPerSecond);
+	void tryMilestone(TurningGrilleCracker& cracker, const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar);
 
 private:
     std::vector<std::thread> startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount);
@@ -141,6 +145,7 @@ public:
     TurningGrilleCrackerSerial();
 
     void bruteForce(TurningGrilleCracker& cracker);
+	void tryMilestone(TurningGrilleCracker& cracker, const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar);
 };
 
 

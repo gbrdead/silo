@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.voidland.concurrent.Silo;
 
@@ -23,9 +21,7 @@ public class TurningGrilleCracker
     private char[] cipherText;
     private WordsTrie wordsTrie;
     
-    private Lock milestoneReportMutex;
     private long start;
-    
     private long grilleCountAtMilestoneStart;
     private long milestoneStart;
     long bestGrillesPerSecond;
@@ -57,7 +53,6 @@ public class TurningGrilleCracker
     	
     	this.wordsTrie = new WordsTrie(TurningGrilleCracker.WORDS_FILE_PATH);
     
-        this.milestoneReportMutex = new ReentrantLock(false);
         this.grilleCountSoFar = new AtomicLong(0);
         
         this.implDetails = implDetails;
@@ -65,7 +60,8 @@ public class TurningGrilleCracker
     
     public void bruteForce()
     {
-        this.milestoneStart = this.start = System.nanoTime();
+        this.start = System.nanoTime();
+        this.milestoneStart = this.start;
         
         this.implDetails.bruteForce(this);
         
@@ -117,47 +113,42 @@ public class TurningGrilleCracker
         if (grilleCountSoFar % (this.grilleCount / 1000) == 0)   // A milestone every 0.1%.
         {
             long milestoneEnd = System.nanoTime();
-            
-            if (this.milestoneReportMutex.tryLock())
-            {
-            	try
-            	{
-                    long elapsedTimeNs = milestoneEnd - this.milestoneStart;
-                    if (elapsedTimeNs > 0)
-                    {
-	                    long grilleCountForMilestone = grilleCountSoFar - this.grilleCountAtMilestoneStart;
-	                    long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
-	                    if (grillesPerSecond > this.bestGrillesPerSecond)
-	                    {
-	                        this.bestGrillesPerSecond = grillesPerSecond;
-	                    }
-	        
-	                    String milestoneStatus = this.implDetails.milestone(this, grillesPerSecond);
-	                    
-	                    if (Silo.VERBOSE)
-	                    {
-	                        float done = grilleCountSoFar * 100.0f / this.grilleCount;
-	            
-	                        System.err.print(String.format("%.1f", done) + "% done; ");
-	                        System.err.print("current speed: " + grillesPerSecond + " grilles/s; ");
-	                        System.err.print("best speed so far: " + this.bestGrillesPerSecond + " grilles/s");
-	                        if (milestoneStatus.length() > 0)
-	                        {
-	                            System.err.print("; " + milestoneStatus);
-	                        }
-	                        System.err.println();
-	                    }
-	                    
-	                    this.milestoneStart = milestoneEnd;
-	                    this.grilleCountAtMilestoneStart = grilleCountSoFar;
-	                }
-            	}
-            	finally
-            	{
-            		this.milestoneReportMutex.unlock();
-            	}
-            }
+            this.implDetails.tryMilestone(this, milestoneEnd, grilleCountSoFar);
         }
+    }
+            
+    Long milestone(long milestoneEnd, long grilleCountSoFar, String milestoneDetailsStatus)
+    {
+        long elapsedTimeNs = milestoneEnd - this.milestoneStart;
+        if (elapsedTimeNs > 0)
+        {
+            long grilleCountForMilestone = grilleCountSoFar - this.grilleCountAtMilestoneStart;
+            long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
+            if (grillesPerSecond > this.bestGrillesPerSecond)
+            {
+                this.bestGrillesPerSecond = grillesPerSecond;
+            }
+            
+            if (Silo.VERBOSE)
+            {
+                float done = grilleCountSoFar * 100.0f / this.grilleCount;
+    
+                System.err.print(String.format("%.1f", done) + "% done; ");
+                System.err.print("current speed: " + grillesPerSecond + " grilles/s; ");
+                System.err.print("best speed so far: " + this.bestGrillesPerSecond + " grilles/s");
+                if (milestoneDetailsStatus.length() > 0)
+                {
+                    System.err.print("; " + milestoneDetailsStatus);
+                }
+                System.err.println();
+            }
+            
+            this.milestoneStart = milestoneEnd;
+            this.grilleCountAtMilestoneStart = grilleCountSoFar;
+            
+            return grillesPerSecond;
+        }
+        return null;
     }
     
     private void findWordsAndReport(CharSequence candidate)
