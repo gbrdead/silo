@@ -30,7 +30,7 @@ void WordsTrie::loadWords(const std::string& wordsFilePath)
     for (std::string word; std::getline(wordsStream, word); )
     {
         boost::to_upper(word);
-        boost::erase_all_regex(word, NOT_ENGLISH_LETTERS_RE);
+        boost::erase_all_regex(word, NOT_CAPITAL_ENGLISH_LETTERS_RE);
 
         if (word.length() >= 3) // Short words significantly increase the count of false positives.
         {

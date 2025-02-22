@@ -13,6 +13,7 @@
 #include <atomic>
 #include <vector>
 #include <optional>
+#include <set>
 #include <boost/algorithm/string/regex.hpp>
 #include "concurrentqueue/concurrentqueue.h"
 
@@ -32,7 +33,7 @@ namespace org::voidland::concurrent::turning_grille
 {
 
 
-extern boost::regex NOT_ENGLISH_LETTERS_RE;
+extern boost::regex NOT_CAPITAL_ENGLISH_LETTERS_RE;
 
 
 class TurningGrilleCracker;
@@ -67,6 +68,8 @@ private:
 
     std::string cipherText;
     WordsTrie wordsTrie;
+    std::mutex candidatesMutex;
+    std::set<std::string> candidates;
 
     std::chrono::steady_clock::time_point start;
     std::chrono::steady_clock::time_point milestoneStart;
@@ -79,7 +82,7 @@ public:
     TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails);
     virtual ~TurningGrilleCracker();
 
-    void bruteForce();
+    std::set<std::string> bruteForce();
 
 private:
     uint64_t applyGrille(const Grille& grill);

@@ -2,6 +2,8 @@ package org.voidland.concurrent.turning_grille;
 
 import java.io.IOException;
 import java.util.Locale;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -14,7 +16,7 @@ public class TurningGrilleCracker
     private static final String WORDS_FILE_PATH = "3000words.txt";
     private static final int MIN_DETECTED_WORD_COUNT = 17;	// Determined by gut feeling.
     
-    static final Pattern NOT_ENGLISH_LETTERS_RE = Pattern.compile("[^A-Z]");
+    public static final Pattern NOT_CAPITAL_ENGLISH_LETTERS_RE = Pattern.compile("[^A-Z]");
     
 
     int sideLength;
@@ -23,6 +25,7 @@ public class TurningGrilleCracker
     
     private char[] cipherText;
     private WordsTrie wordsTrie;
+    private SortedSet<String> candidates;
     
     private long start;
     private long milestoneStart;
@@ -36,7 +39,7 @@ public class TurningGrilleCracker
     	throws IOException
     {
     	cipherText = cipherText.toUpperCase(Locale.ENGLISH);
-    	if (TurningGrilleCracker.NOT_ENGLISH_LETTERS_RE.matcher(cipherText).matches())
+    	if (TurningGrilleCracker.NOT_CAPITAL_ENGLISH_LETTERS_RE.matcher(cipherText).matches())
     	{
     		throw new IllegalArgumentException("The ciphertext must contain only English letters.");
     	}
@@ -63,8 +66,9 @@ public class TurningGrilleCracker
         this.implDetails = implDetails;
     }
     
-    public void bruteForce()
+    public SortedSet<String> bruteForce()
     {
+    	this.candidates = new TreeSet<>();
         this.start = System.nanoTime();
         this.milestoneStart = this.start;
         
@@ -85,7 +89,9 @@ public class TurningGrilleCracker
         if (this.grilleCountSoFar.get() != this.grilleCount)
         {
             throw new RuntimeException("Some grills got lost.");
-        }        
+        }
+        
+        return this.candidates;
     }
     
     long applyGrille(Grille grill)
@@ -161,6 +167,10 @@ public class TurningGrilleCracker
         int wordsFound = this.wordsTrie.countWords(candidate);
         if (wordsFound >= TurningGrilleCracker.MIN_DETECTED_WORD_COUNT)
         {
+        	synchronized (this.candidates)
+        	{
+        		this.candidates.add(candidate.toString());
+        	}
             if (Silo.VERBOSE)
             {
                 System.out.println(wordsFound + ": " + candidate);

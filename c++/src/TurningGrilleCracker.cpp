@@ -23,7 +23,7 @@ namespace org::voidland::concurrent::turning_grille
 {
 
 
-boost::regex NOT_ENGLISH_LETTERS_RE("[^A-Z]");
+boost::regex NOT_CAPITAL_ENGLISH_LETTERS_RE("[^A-Z]");
 
 
 TurningGrilleCrackerImplDetails::~TurningGrilleCrackerImplDetails()
@@ -40,12 +40,14 @@ TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, std::u
     grilleCountSoFar(0),
     cipherText(cipherText),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
+	candidatesMutex(),
+	candidates(),
     grilleCountAtMilestoneStart(0),
     bestGrillesPerSecond(0),
 	implDetails(std::move(implDetails))
 {
     boost::to_upper(this->cipherText);
-    if (boost::regex_match(this->cipherText, NOT_ENGLISH_LETTERS_RE))
+    if (boost::regex_match(this->cipherText, NOT_CAPITAL_ENGLISH_LETTERS_RE))
     {
         throw std::invalid_argument("The ciphertext must contain only English letters.");
     }
@@ -67,7 +69,7 @@ TurningGrilleCracker::~TurningGrilleCracker()
 {
 }
 
-void TurningGrilleCracker::bruteForce()
+std::set<std::string> TurningGrilleCracker::bruteForce()
 {
     this->start = std::chrono::steady_clock::now();
     this->milestoneStart = this->start;
@@ -90,6 +92,8 @@ void TurningGrilleCracker::bruteForce()
     {
         throw std::runtime_error("Some grilles got lost.");
     }
+
+    return std::move(this->candidates);
 }
 
 uint64_t TurningGrilleCracker::applyGrille(const Grille& grille)
@@ -167,6 +171,10 @@ void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
     unsigned wordsFound = this->wordsTrie.countWords(candidate);
     if (wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT)
     {
+    	{
+    		std::lock_guard candidatesLock(this->candidatesMutex);
+    		this->candidates.insert(candidate);
+    	}
         if (VERBOSE)
         {
             std::cout << (std::to_string(wordsFound) + ": " + candidate + '\n');

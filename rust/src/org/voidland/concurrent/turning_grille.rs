@@ -10,6 +10,7 @@ use super::VERBOSE;
 use super::queue::MPMC_PortionQueue;
 
 use std::vec::Vec;
+use std::collections::BTreeSet;
 use std::clone::Clone;
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::AtomicUsize;
@@ -22,13 +23,13 @@ use std::thread::JoinHandle;
 use std::thread::available_parallelism;
 use std::time::Instant;
 use std::time::Duration;
-use regex::Regex;
 use std::string::String;
 use std::sync::LazyLock;
+use regex::Regex;
 use concurrent_queue::ConcurrentQueue;
 
 
-static NOT_ENGLISH_LETTERS_RE: LazyLock<Regex> = LazyLock::new(||
+pub static NOT_CAPITAL_ENGLISH_LETTERS_RE: LazyLock<Regex> = LazyLock::new(||
     {
         Regex::new(r"[^A-Z]").unwrap()
     });
@@ -83,6 +84,7 @@ pub struct TurningGrilleCracker
 
     cipherText: Vec<char>,
     wordsTrie: Arc<WordsTrie>,
+    candidates: Mutex<Option<BTreeSet<String>>>,
     
     implDetails: Arc<dyn TurningGrilleCrackerImplDetails>
 }
@@ -96,7 +98,7 @@ impl TurningGrilleCracker
     pub fn new(cipherText: &str, implDetails: Box<dyn TurningGrilleCrackerImplDetails>) -> Self
     {
         let cipherText: String = cipherText.to_uppercase();
-        if NOT_ENGLISH_LETTERS_RE.is_match(&cipherText)
+        if NOT_CAPITAL_ENGLISH_LETTERS_RE.is_match(&cipherText)
         {
             panic!("The ciphertext must contain only English letters.");
         }
@@ -122,12 +124,14 @@ impl TurningGrilleCracker
             grilleCountSoFar: AtomicU64::new(0),
             cipherText: cipherText,
             wordsTrie: Arc::new(WordsTrie::new(TurningGrilleCracker::WORDS_FILE_PATH)),
+            candidates: Mutex::new(None),
             implDetails: Arc::from(implDetails)
         }
     }
     
-    pub fn bruteForce(self: &Arc<Self>)
+    pub fn bruteForce(self: &Arc<Self>) -> BTreeSet<String>
     {
+        self.candidates.lock().unwrap().replace(BTreeSet::new());
         self.implDetails.clone().modifyCrackerMilestoneState(self,
             | _, milestoneState: &mut TurningGrilleCrackerMilestoneState |
             {
@@ -154,6 +158,8 @@ impl TurningGrilleCracker
         {
             panic!("Some grilles got lost.");
         }
+        
+        self.candidates.lock().unwrap().take().unwrap()
     }
     
     fn applyGrille(self: &Arc<Self>, grille: &Grille) -> u64
@@ -240,6 +246,7 @@ impl TurningGrilleCracker
         let wordsFound: usize = self.wordsTrie.countWords(candidate);
         if wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT
         {
+            self.candidates.lock().unwrap().as_mut().unwrap().insert(candidate.to_string());
             if self.VERBOSE
             {
                 println!("{}: {}", wordsFound, candidate);

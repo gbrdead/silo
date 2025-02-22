@@ -16,6 +16,7 @@ using namespace org::voidland::concurrent;
 
 
 inline static const std::string CIPHER_TEXT_PATH = "encrypted_msg.txt";
+inline static const std::string CLEAR_TEXT_PATH = "decrypted_msg.txt";
 
 
 static void heatCpu()
@@ -60,6 +61,18 @@ int main(int argc, char *argv[])
 
             std::getline(cipherTextStream, cipherText);
         }
+        std::string clearText;
+        {
+            std::ifstream clearTextStream(CLEAR_TEXT_PATH);
+            if (clearTextStream.fail())
+            {
+                throw std::ios::failure("Cannot open file: " + CLEAR_TEXT_PATH);
+            }
+
+            std::getline(clearTextStream, clearText);
+        }
+        boost::to_upper(clearText);
+        boost::erase_all_regex(clearText, turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE);
 
         std::string arg;
         if (argc >= 2)
@@ -160,13 +173,21 @@ int main(int argc, char *argv[])
         }
 
         turning_grille::TurningGrilleCracker cracker(cipherText, std::move(crackerImplDetails));
-        heatCpu();
-        cracker.bruteForce();
+        if (!VERBOSE)
+        {
+        	heatCpu();
+        }
+        std::set<std::string> candidates = cracker.bruteForce();
 
+        if (candidates.find(clearText) == candidates.end())
+        {
+        	throw std::logic_error("The correct clear text was not found among the decrypted candidates.");
+        }
         return 0;
     }
     catch (const std::exception& e)
     {
         std::cerr << boost::core::demangle(typeid(e).name()) << ": " << e.what() << std::endl;
+        return 1;
     }
 }

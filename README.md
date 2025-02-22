@@ -79,33 +79,33 @@ Intel Core i5-4210M
 
 | runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
-| **C++/native** | 839 |  | 657 |
-| **Rust/native** |  |  |  |
+| **C++/native** |  |  |  |
+| **Rust/native** | 718 | 675 |  |
 | **Java/JVM** |  |  |  |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
-| **C++/native** | 1397 | 1263 | 1032 |
+| **C++/native** |  |  |  |
 | **Rust/native** | 1424 | 1272 | 654 |
-| **Java/JVM** | 821 | 659 | 572 |
+| **Java/JVM** |  |  |  |
 
 AMD Ryzen 7735HS
 
 | runtime / scenario implementation | *syncless* | *best mostly non-blocking* | *textbook* |
 |---|---|---|---|
-| **C++/native** | 3582 | 3017 | 1487 |
-| **Rust/native** | 3974 | 3017 | 747 |
-| **Java/JVM** | 1770 | 1951 | 1068 |
+| **C++/native** | 4736 | 3526 | 1694 |
+| **Rust/native** | 3967 | 2998 | 743 |
+| **Java/JVM** |  |  |  |
 
 Sigle-core single-thread per GHz
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
-| Intel Core i5-4210M |  |  |  |
-| Intel Core i5-10210U |  |  |  |
-| AMD Ryzen 7735HS |  |  |  |
+| Intel Core i5-4210M |  | 127 |  |
+| Intel Core i5-10210U |  | 235 |  |
+| AMD Ryzen 7735HS | 277 | 219 |  |
 
 ---
 

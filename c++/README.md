@@ -48,13 +48,14 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| syncless | 839 | 1397 | 3582 |
-| concurrent |  | 1263 | 3017 |
-| atomic |  | 1257 | 3002 |
-| lockfree |  | 1195 | 2803 |
-| textbook | 657 | 1032 | 1487 |
-| onetbb |  |  | 1432 |
-| onetbb_bounded |  |  | 1409 |
+| syncless |  |  | 4736 |
+| concurrent |  |  | 3388 |
+| atomic |  |  | 3526 |
+| lockfree |  |  | 3009 |
+| textbook |  |  | 1694 |
+| onetbb |  |  | 1217 |
+| onetbb_bounded |  |  | 1068 |
+| serial |  |  | 886 |
 
 General results:
 - `concurrent` and `atomic` have almost the same performance and can be considered as co-winners among the queues.

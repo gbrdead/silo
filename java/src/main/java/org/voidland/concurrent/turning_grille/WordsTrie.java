@@ -104,7 +104,7 @@ public class WordsTrie
             while ((word = wordsReader.readLine()) != null)
             {
                 word = word.toUpperCase(Locale.ENGLISH);
-                word = TurningGrilleCracker.NOT_ENGLISH_LETTERS_RE.matcher(word).replaceAll("");
+                word = TurningGrilleCracker.NOT_CAPITAL_ENGLISH_LETTERS_RE.matcher(word).replaceAll("");
                 
                 if (word.length() >= 3)	// Short words significantly increase the count of false positives.
                 {

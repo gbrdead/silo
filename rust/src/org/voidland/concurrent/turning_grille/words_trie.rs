@@ -1,7 +1,7 @@
 use std::string::String;
 use std::fs::read_to_string;
 use core::str::Chars;
-use super::NOT_ENGLISH_LETTERS_RE;
+use super::NOT_CAPITAL_ENGLISH_LETTERS_RE;
 
 
 const NUMBER_OF_LETTERS: usize = ('Z' as usize) - ('A' as usize) + 1;
@@ -119,7 +119,7 @@ impl WordsTrie
 		for line in read_to_string(wordsFilePath).unwrap().lines()
 		{
 			let word: String = line.to_uppercase();
-			let word = NOT_ENGLISH_LETTERS_RE.replace_all(&word, "");
+			let word = NOT_CAPITAL_ENGLISH_LETTERS_RE.replace_all(&word, "");
             
 			if word.chars().count() >= 3
 			{

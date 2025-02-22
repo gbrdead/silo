@@ -27,12 +27,13 @@ The resulting executable is `target/release/silo`.
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| syncless |  | 1424 | 3974 |
-| concurrent |  | 1272 | 3017 |
-| textbook |  | 654 | 747 |
+| syncless | 718 | 1424 | 3967 |
+| concurrent | 675 | 1272 | 2998 |
+| textbook |  | 654 | 743 |
+| serial | 331 | 376 | 700 |
 
 General results:
-- Rust is on par with C++ for non-blocking implementations.
+- Rust is noticeably slower than C++.
 
 Some remarks: 
 - The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done. As a result, the CPUs are not fully utilized for just a small amount of time and the average speed is not significantly affected.

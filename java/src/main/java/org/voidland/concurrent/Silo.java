@@ -6,6 +6,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.NoSuchElementException;
+import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.voidland.concurrent.queue.BlockingPortionQueue;
@@ -28,6 +30,7 @@ public class Silo
     
     
     private static final String CIPHER_TEXT_PATH = "encrypted_msg.txt";
+    private static final String CLEAR_TEXT_PATH = "decrypted_msg.txt";
     
     
     private static void heatCpu()
@@ -72,6 +75,13 @@ public class Silo
             {
                 cipherText = cipherTextReader.readLine();
             }
+            String clearText;
+            try (BufferedReader clearTextReader = new BufferedReader(new FileReader(Silo.CLEAR_TEXT_PATH)))
+            {
+                clearText = clearTextReader.readLine();
+            }
+            clearText = clearText.toUpperCase(Locale.ENGLISH);
+            clearText = TurningGrilleCracker.NOT_CAPITAL_ENGLISH_LETTERS_RE.matcher(clearText).replaceAll("");
             
             String arg;
             if (args.length >= 1)
@@ -134,12 +144,21 @@ public class Silo
             }
 
             TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, crackerImplDetails);
-            Silo.heatCpu();
-            cracker.bruteForce();
+            if (!Silo.VERBOSE)
+            {
+            	Silo.heatCpu();
+            }
+            SortedSet<String> candidates = cracker.bruteForce();
+            
+            if (!candidates.contains(clearText))
+            {
+            	throw new NoSuchElementException("The correct clear text was not found among the decrypted candidates.");
+            }
         }
         catch (Exception e)
         {
             e.printStackTrace();
+            System.exit(1);
         }
     }
 }
