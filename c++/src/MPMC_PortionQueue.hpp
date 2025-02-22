@@ -26,6 +26,9 @@ public:
 
     virtual std::size_t getSize() = 0;
     virtual std::size_t getMaxSize() = 0;
+
+    virtual unsigned getBlockedProducers() = 0;
+    virtual unsigned getBlockedConsumers() = 0;
 };
 
 template <class E>

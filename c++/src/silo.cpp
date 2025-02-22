@@ -33,13 +33,13 @@ static void heatCpu()
             {
                 [&stop]
                 {
-                    while (!stop);
+                    while (!stop.load(std::memory_order_relaxed));
                 }
             });
     }
 
     std::this_thread::sleep_for(std::chrono::minutes(1));
-    stop = true;
+    stop.store(true, std::memory_order_relaxed);
 
     for (std::thread& workerThread : workerThreads)
     {

@@ -46,14 +46,14 @@ fn heatCpu()
         let stop = stop.clone();
         workerThreads.push(thread::spawn(move ||
             {
-                while !stop.load(Ordering::SeqCst)
+                while !stop.load(Ordering::Relaxed)
                 {
                 }
             }));
     }
     
     thread::sleep(time::Duration::from_secs(60));
-    stop.store(true, Ordering::SeqCst);
+    stop.store(true, Ordering::Relaxed);
     
     for workerThread in &mut workerThreads.into_iter()
     {

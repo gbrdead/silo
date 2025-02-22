@@ -59,9 +59,9 @@ public class TurningGrilleCrackerSyncless
 		        {
 		            StringBuilder status = new StringBuilder();
 		            
-		            status.append("worker threads: ");
+		            status.append("workers: ");
 		            status.append(this.workersCount.get());
-		            status.append("; completion per thread: ");
+		            status.append("; completion per worker: ");
 		            
 		            boolean first = true;
 		            for (Pair<AtomicLong, Long> intervalCompletion : this.grilleIntervalsCompletion)

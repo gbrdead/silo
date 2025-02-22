@@ -87,11 +87,26 @@ public class TurningGrilleCrackerProducerConsumer
     		try
     		{
 		        int queueSize = this.portionQueue.getSize();
+		        int blockedProducers = this.portionQueue.getBlockedProducers();
+		        int blockedConsumers = this.portionQueue.getBlockedConsumers();
 		        
 		        String milestoneStatus = "";
 		        if (Silo.VERBOSE)
 		        {
-		            milestoneStatus = "consumer threads: " + this.consumerCount.get() + "; queue size: " + queueSize + " / " + this.portionQueue.getMaxSize();
+		        	StringBuilder status = new StringBuilder();
+		        	
+		            status.append("consumers: ");
+		            status.append(this.consumerCount.get());
+		            status.append("; blocked consumers: ");
+		            status.append(blockedConsumers);
+		            status.append("; blocked producers: ");
+		            status.append(blockedProducers);
+		            status.append("; queue size: ");
+		            status.append(queueSize);
+		            status.append("/");
+		            status.append(this.portionQueue.getMaxSize());
+		            
+		            milestoneStatus = status.toString();
 		        }
 		        
 		        Long grillesPerSecond = cracker.milestone(milestoneEnd, grilleCountSoFar, milestoneStatus);
@@ -148,7 +163,7 @@ public class TurningGrilleCrackerProducerConsumer
     @Override
     public String milestonesSummary(TurningGrilleCracker cracker)
     {
-        return "best consumer threads: " + this.bestConsumerCount;
+        return "best consumer count: " + this.bestConsumerCount;
     }
 
     private List<Thread> startProducerThreads(TurningGrilleCracker cracker)

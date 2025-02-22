@@ -1,8 +1,10 @@
 use super::MPMC_PortionQueue;
 
 use std::collections::VecDeque;
+use std::sync::atomic::AtomicUsize;
 use std::sync::Mutex;
 use std::sync::Condvar;
+use std::sync::atomic::Ordering;
 
 
 struct TextbookPortionQueueUnsync<E>
@@ -17,7 +19,9 @@ pub struct TextbookPortionQueue<E>
 
     mutex: Mutex<TextbookPortionQueueUnsync<E>>,
     notEmptyCondition: Condvar,
-    notFullCondition: Condvar
+    notFullCondition: Condvar,
+    blockedProducers: AtomicUsize,
+    blockedConsumers: AtomicUsize
 }
 
 impl<E> TextbookPortionQueue<E>
@@ -34,7 +38,9 @@ impl<E> TextbookPortionQueue<E>
                     workDone: false
                 }),
             notEmptyCondition: Condvar::new(),
-            notFullCondition: Condvar::new()
+            notFullCondition: Condvar::new(),
+            blockedProducers: AtomicUsize::new(0),
+            blockedConsumers: AtomicUsize::new(0)
         }
     }
 }
@@ -43,34 +49,43 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for TextbookPortionQueue<E>
 {
     fn addPortion(&self, portion: E)
     {
+        self.blockedProducers.fetch_add(1, Ordering::Relaxed);
         let mut selfUnsync = self.mutex.lock().unwrap();
         
         while selfUnsync.queue.len() >= self.maxSize
         {
             selfUnsync = self.notFullCondition.wait(selfUnsync).unwrap();
         }
+        self.blockedProducers.fetch_sub(1, Ordering::Relaxed);
         
         selfUnsync.queue.push_back(portion);
         
+        self.blockedProducers.fetch_add(1, Ordering::Relaxed);
         self.notEmptyCondition.notify_one();
+        self.blockedProducers.fetch_sub(1, Ordering::Relaxed);
     }
     
     fn retrievePortion(&self) -> Option<E>
     {
+        self.blockedConsumers.fetch_add(1, Ordering::Relaxed);
         let mut selfUnsync = self.mutex.lock().unwrap();
         
         while selfUnsync.queue.is_empty()
         {
             if selfUnsync.workDone
             {
+                self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
                 return None;
             }
             selfUnsync = self.notEmptyCondition.wait(selfUnsync).unwrap();
         }
+        self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
         
         let portion: Option<E> = selfUnsync.queue.pop_front();
         
+        self.blockedConsumers.fetch_add(1, Ordering::Relaxed);
         self.notFullCondition.notify_one();
+        self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
         
         portion
     }
@@ -103,5 +118,15 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for TextbookPortionQueue<E>
     fn getMaxSize(&self) -> usize
     {
         self.maxSize
+    }
+    
+    fn getBlockedProducers(&self) -> usize
+    {
+        self.blockedProducers.load(Ordering::Relaxed)
+    }
+    
+    fn getBlockedConsumers(&self) -> usize
+    {
+        self.blockedConsumers.load(Ordering::Relaxed)
     }
 }

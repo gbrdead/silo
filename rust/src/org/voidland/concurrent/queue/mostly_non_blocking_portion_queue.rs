@@ -19,7 +19,9 @@ pub struct MostlyNonBlockingPortionQueue<E>
     emptyMutex: Mutex<bool>,
     notFullCondition: Condvar,
     notEmptyCondition: Condvar,
-    emptyCondition: Condvar
+    emptyCondition: Condvar,
+    blockedProducers: AtomicUsize,
+    blockedConsumers: AtomicUsize
 }
 
 impl<E> MostlyNonBlockingPortionQueue<E>
@@ -36,7 +38,9 @@ impl<E> MostlyNonBlockingPortionQueue<E>
             emptyMutex: Mutex::new(false),
             notFullCondition: Condvar::new(),
             notEmptyCondition: Condvar::new(),
-            emptyCondition: Condvar::new()
+            emptyCondition: Condvar::new(),
+            blockedProducers: AtomicUsize::new(0),
+            blockedConsumers: AtomicUsize::new(0)
         };
         ret.nonBlockingQueue.setSizeParameters(producerCount, ret.maxSize);
         ret
@@ -53,11 +57,13 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         {
             if self.size.load(Ordering::SeqCst) >= self.maxSize
             {
+                self.blockedProducers.fetch_add(1, Ordering::Relaxed);
                 let mut lock = self.notFullMutex.lock().unwrap();
                 while self.size.load(Ordering::SeqCst) >= self.maxSize
                 {
                     lock = self.notFullCondition.wait(lock).unwrap();
                 }
+                self.blockedProducers.fetch_sub(1, Ordering::Relaxed);
             }
             
             match self.nonBlockingQueue.tryEnqueue(portion)
@@ -69,8 +75,10 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         
         if newSize == self.maxSize * 1 / 4
         {
+            self.blockedProducers.fetch_add(1, Ordering::Relaxed);
             let _lock = self.notEmptyMutex.lock().unwrap();
             self.notEmptyCondition.notify_all();
+            self.blockedProducers.fetch_sub(1, Ordering::Relaxed);
         }
     }
     
@@ -80,11 +88,13 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         
         if portion.is_none()
         {
+            self.blockedConsumers.fetch_add(1, Ordering::Relaxed);
             let mut workDone = self.notEmptyMutex.lock().unwrap();
             loop
             {
                 if *workDone
                 {
+                    self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
                     return None;
                 }
                 portion = self.nonBlockingQueue.tryDequeue();
@@ -94,18 +104,23 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
                 }
                 workDone = self.notEmptyCondition.wait(workDone).unwrap();
             }
+            self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
         }
         
         let newSize: usize = self.size.fetch_sub(1, Ordering::SeqCst) - 1;
         if newSize == self.maxSize * 3 / 4
         {
+            self.blockedConsumers.fetch_add(1, Ordering::Relaxed);
             let _lock = self.notFullMutex.lock().unwrap();
             self.notFullCondition.notify_all();
+            self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
         }
         if newSize == 0
         {
+            self.blockedConsumers.fetch_add(1, Ordering::Relaxed);
             let _lock = self.emptyMutex.lock().unwrap();
             self.emptyCondition.notify_one();
+            self.blockedConsumers.fetch_sub(1, Ordering::Relaxed);
         }
         
         portion
@@ -136,11 +151,21 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
     
     fn getSize(&self) -> usize
     {
-        self.size.load(Ordering::SeqCst)
+        self.size.load(Ordering::Relaxed)
     }
     
     fn getMaxSize(&self) -> usize
     {
         self.maxSize
+    }
+
+    fn getBlockedProducers(&self) -> usize
+    {
+        self.blockedProducers.load(Ordering::Relaxed)
+    }
+    
+    fn getBlockedConsumers(&self) -> usize
+    {
+        self.blockedConsumers.load(Ordering::Relaxed)
     }
 }

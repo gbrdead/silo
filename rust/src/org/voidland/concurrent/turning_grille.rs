@@ -154,7 +154,7 @@ impl TurningGrilleCracker
         }
         eprintln!();
         
-        if self.grilleCountSoFar.load(Ordering::SeqCst) != self.grilleCount
+        if self.grilleCountSoFar.load(Ordering::Relaxed) != self.grilleCount
         {
             panic!("Some grilles got lost.");
         }
@@ -350,15 +350,21 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
             let mut milestoneState = milestoneTryLock.unwrap();
             
             let queueSize: usize = self.portionQueue.getSize();
+            let blockedProducers: usize = self.portionQueue.getBlockedProducers();
+            let blockedConsumers: usize = self.portionQueue.getBlockedConsumers();
             
             let mut milestoneStatus: String = String::new();
             if cracker.VERBOSE
             {
-                milestoneStatus.push_str("consumer threads: ");
-                milestoneStatus.push_str(self.consumerCount.load(Ordering::SeqCst).to_string().as_str());
+                milestoneStatus.push_str("consumers: ");
+                milestoneStatus.push_str(self.consumerCount.load(Ordering::Relaxed).to_string().as_str());
+                milestoneStatus.push_str("; blocked consumers: ");
+                milestoneStatus.push_str(blockedConsumers.to_string().as_str());
+                milestoneStatus.push_str("; blocked producers: ");
+                milestoneStatus.push_str(blockedProducers.to_string().as_str());
                 milestoneStatus.push_str("; queue size: ");
                 milestoneStatus.push_str(queueSize.to_string().as_str());
-                milestoneStatus.push_str(" / ");
+                milestoneStatus.push_str("/");
                 milestoneStatus.push_str(self.portionQueue.getMaxSize().to_string().as_str());
             }
             
@@ -380,7 +386,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
             if grillesPerSecond > milestoneState.bestGrillesPerSecond
             {
                 milestoneState.bestGrillesPerSecond = grillesPerSecond;
-                milestoneState.bestConsumerCount = self.consumerCount.load(Ordering::SeqCst) as usize;
+                milestoneState.bestConsumerCount = self.consumerCount.load(Ordering::Relaxed) as usize;
             }
             
             if cracker.grilleCountSoFar.load(Ordering::SeqCst) < cracker.grilleCount
@@ -420,7 +426,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
     fn milestonesSummary(self: Arc<Self>, _cracker: &Arc<TurningGrilleCracker>) -> String
     {
         let milestoneState = self.milestoneStateMutex.lock().unwrap();
-        let mut ret: String = String::from("best consumer threads: ");
+        let mut ret: String = String::from("best consumer count: ");
         ret.push_str(milestoneState.bestConsumerCount.to_string().as_str());
         ret
     }
@@ -601,9 +607,9 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerSyncless
             let mut milestoneStatus: String = String::new();        
             if cracker.VERBOSE
             {
-                milestoneStatus.push_str("worker threads: ");
-                milestoneStatus.push_str(self.workersCount.load(Ordering::SeqCst).to_string().as_str());
-                milestoneStatus.push_str("; completion per thread: ");
+                milestoneStatus.push_str("workers: ");
+                milestoneStatus.push_str(self.workersCount.load(Ordering::Relaxed).to_string().as_str());
+                milestoneStatus.push_str("; completion per worker: ");
 
                 let mut first: bool = true;
                 for (processedGrillsCount, totalGrillsCount) in &milestoneState.grilleIntervalsCompletion
@@ -617,7 +623,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerSyncless
                         first = false;
                     }
                     
-                    let processedGrillsCount: u64 = processedGrillsCount.load(Ordering::SeqCst);
+                    let processedGrillsCount: u64 = processedGrillsCount.load(Ordering::Relaxed);
                     let completion: f32 = processedGrillsCount as f32 * 100.0 / *totalGrillsCount as f32;
                     milestoneStatus.push_str(format!("{:.1}", completion).as_str());
                 }

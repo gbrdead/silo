@@ -15,4 +15,7 @@ public interface MPMC_PortionQueue<E>
 	
     int getSize();
     int getMaxSize();
+    
+    int getBlockedProducers();
+    int getBlockedConsumers();
 }

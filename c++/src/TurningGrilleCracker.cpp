@@ -88,7 +88,7 @@ std::set<std::string> TurningGrilleCracker::bruteForce()
     }
     std::cerr << std::endl;
 
-    if (this->grilleCountSoFar != this->grilleCount)
+    if (this->grilleCountSoFar.load(std::memory_order_relaxed) != this->grilleCount)
     {
         throw std::runtime_error("Some grilles got lost.");
     }
@@ -227,12 +227,16 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
     	std::lock_guard milestoneStateLock(this->milestoneStateMutex, std::adopt_lock);
 
 		std::size_t queueSize = this->portionQueue->getSize();
+		unsigned blockedProducers = this->portionQueue->getBlockedProducers();
+		unsigned blockedConsumers = this->portionQueue->getBlockedConsumers();
 
 		std::string milestoneStatus;
 		if (VERBOSE)
 		{
 			std::ostringstream s;
-			s << "consumer threads: " << this->consumerCount << "; queue size: " << queueSize << " / " << this->portionQueue->getMaxSize();
+			s << "consumers: " << this->consumerCount.load(std::memory_order_relaxed);
+			s << "; blocked consumers: " << blockedConsumers << "; blocked producers: " << blockedProducers;
+			s << "; queue size: " << queueSize << "/" << this->portionQueue->getMaxSize();
 			milestoneStatus = s.str();
 		}
 
@@ -246,7 +250,7 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
 		if (grillesPerSecond > this->bestGrillesPerSecond)
 		{
 			this->bestGrillesPerSecond = grillesPerSecond;
-			this->bestConsumerCount = this->consumerCount;
+			this->bestConsumerCount = this->consumerCount.load(std::memory_order_relaxed);
 		}
 
 		if (cracker.grilleCountSoFar < cracker.grilleCount)
@@ -286,7 +290,7 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
 std::string TurningGrilleCrackerProducerConsumer::milestonesSummary(TurningGrilleCracker& cracker)
 {
     std::ostringstream s;
-    s << "best consumer threads: " << this->bestConsumerCount;
+    s << "best consumer count: " << this->bestConsumerCount;
     return s.str();
 }
 
@@ -404,7 +408,7 @@ void TurningGrilleCrackerSyncless::tryMilestone(TurningGrilleCracker& cracker, c
 		if (VERBOSE)
 		{
 	        std::ostringstream s;
-	        s << "worker threads: " << this->workersCount << "; completion per thread: ";
+	        s << "workers: " << this->workersCount.load(std::memory_order_relaxed) << "; completion per worker: ";
 
 	        bool first = true;
 	        for (const std::pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>& intervalCompletion : this->grilleIntervalsCompletion)
@@ -418,7 +422,7 @@ void TurningGrilleCrackerSyncless::tryMilestone(TurningGrilleCracker& cracker, c
 	                first = false;
 	            }
 
-	            float completion = (*intervalCompletion.first) * 100.0f / intervalCompletion.second;
+	            float completion = intervalCompletion.first->load(std::memory_order_relaxed) * 100.0f / intervalCompletion.second;
 	            s << std::fixed << std::setprecision(1) << completion;
 	        }
 	        s << "% done";
