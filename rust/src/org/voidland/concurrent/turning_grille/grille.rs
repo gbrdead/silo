@@ -2,6 +2,7 @@ use std::vec::Vec;
 
 
 
+#[derive(Clone)]
 pub struct Grille
 {
     halfSideLength: usize,
@@ -118,19 +119,6 @@ impl Grille
 
         self.holes[holeX * self.halfSideLength + holeY] == quadrant
     }   
-}
-
-impl Clone for Grille
-{
-    #[inline]
-    fn clone(&self) -> Self
-    {
-        Self
-        {
-            halfSideLength: self.halfSideLength,
-            holes: self.holes.clone()
-        }
-    }
 }
 
 

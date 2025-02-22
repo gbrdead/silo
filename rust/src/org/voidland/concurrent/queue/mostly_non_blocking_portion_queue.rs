@@ -51,10 +51,10 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         
         loop
         {
-            if self.size.load(Ordering::SeqCst) > self.maxSize
+            if self.size.load(Ordering::SeqCst) >= self.maxSize
             {
                 let mut lock = self.notFullMutex.lock().unwrap();
-                while self.size.load(Ordering::SeqCst) > self.maxSize
+                while self.size.load(Ordering::SeqCst) >= self.maxSize
                 {
                     lock = self.notFullCondition.wait(lock).unwrap();
                 }
@@ -77,6 +77,7 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
     fn retrievePortion(&self) -> Option<E>
     {
         let mut portion: Option<E> = self.nonBlockingQueue.tryDequeue();
+        
         if portion.is_none()
         {
             let mut workDone = self.notEmptyMutex.lock().unwrap();
@@ -104,7 +105,7 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         if newSize == 0
         {
             let _lock = self.emptyMutex.lock().unwrap();
-            self.emptyCondition.notify_all();
+            self.emptyCondition.notify_one();
         }
         
         portion
@@ -126,7 +127,7 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
         }        
     }
     
-    fn stopConsumers(&self, _consumerCount: usize)
+    fn stopConsumers(&self, _finalConsumerCount: usize)
     {
         let mut workDone = self.notEmptyMutex.lock().unwrap();
         *workDone = true;

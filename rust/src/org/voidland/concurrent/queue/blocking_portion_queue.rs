@@ -85,7 +85,7 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for TextbookPortionQueue<E>
         }
     }
     
-    fn stopConsumers(&self, _consumerCount: usize)
+    fn stopConsumers(&self, _finalConsumerCount: usize)
     {
         let mut selfUnsync = self.mutex.lock().unwrap();
 

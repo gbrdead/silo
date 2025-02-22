@@ -25,6 +25,7 @@ private:
 
     std::size_t maxSize;
     std::atomic<std::size_t> size;
+
     bool workDone;
 
     std::mutex notFullMutex;
@@ -52,7 +53,13 @@ MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t init
 	nonBlockingQueue(std::move(nonBlockingQueue)),
     maxSize(initialConsumerCount * producerCount * 1000),
     size(0),
-    workDone(false)
+    workDone(false),
+    notFullMutex(),
+    notEmptyMutex(),
+    emptyMutex(),
+    notFullCondition(),
+    notEmptyCondition(),
+    emptyCondition()
 {
 	this->nonBlockingQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
 }
@@ -69,18 +76,22 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
 {
     std::size_t newSize = ++this->size;
 
-    do
+    while (true)
     {
-        if (this->size > this->maxSize)
+        if (this->size >= this->maxSize)
         {
             std::unique_lock lock(this->notFullMutex);
-            while (this->size > this->maxSize)
+            while (this->size >= this->maxSize)
             {
                 this->notFullCondition.wait(lock);
             }
         }
+
+        if (this->nonBlockingQueue->tryEnqueue(std::move(portion)))
+        {
+        	break;
+        }
     }
-    while (!this->nonBlockingQueue->tryEnqueue(std::move(portion)));
 
     if (newSize == this->maxSize * 1 / 4)
     {
@@ -97,13 +108,17 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
     if (!this->nonBlockingQueue->tryDequeue(portion))
     {
         std::unique_lock lock(this->notEmptyMutex);
-        while (!this->nonBlockingQueue->tryDequeue(portion))
+        while (true)
         {
             if (this->workDone)
             {
                 return std::nullopt;
             }
-            this->notEmptyCondition.wait(lock);
+        	if (this->nonBlockingQueue->tryDequeue(portion))
+        	{
+        		break;
+        	}
+        	this->notEmptyCondition.wait(lock);
         }
     }
 
@@ -142,11 +157,9 @@ void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
 template <class E>
 void MostlyNonBlockingPortionQueue<E>::stopConsumers(std::size_t consumerCount)
 {
-    this->workDone = true;
-    {
-        std::lock_guard lock(this->notEmptyMutex);
-        this->notEmptyCondition.notify_all();
-    }
+	std::lock_guard lock(this->notEmptyMutex);
+	this->workDone = true;
+	this->notEmptyCondition.notify_all();
 }
 
 template <class E>

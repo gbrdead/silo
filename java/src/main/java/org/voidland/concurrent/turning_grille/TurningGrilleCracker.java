@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 import org.voidland.concurrent.Silo;
 
@@ -12,6 +13,8 @@ public class TurningGrilleCracker
 {
     private static final String WORDS_FILE_PATH = "3000words.txt";
     private static final int MIN_DETECTED_WORD_COUNT = 17;	// Determined by gut feeling.
+    
+    static final Pattern NOT_ENGLISH_LETTERS_RE = Pattern.compile("[^A-Z]");
     
 
     int sideLength;
@@ -22,8 +25,8 @@ public class TurningGrilleCracker
     private WordsTrie wordsTrie;
     
     private long start;
-    private long grilleCountAtMilestoneStart;
     private long milestoneStart;
+    private long grilleCountAtMilestoneStart;
     long bestGrillesPerSecond;
     
     private TurningGrilleCrackerImplDetails implDetails;
@@ -33,7 +36,7 @@ public class TurningGrilleCracker
     	throws IOException
     {
     	cipherText = cipherText.toUpperCase(Locale.ENGLISH);
-    	if (cipherText.matches("[^A-Z]"))
+    	if (TurningGrilleCracker.NOT_ENGLISH_LETTERS_RE.matcher(cipherText).matches())
     	{
     		throw new IllegalArgumentException("The ciphertext must contain only English letters.");
     	}
@@ -54,6 +57,8 @@ public class TurningGrilleCracker
     	this.wordsTrie = new WordsTrie(TurningGrilleCracker.WORDS_FILE_PATH);
     
         this.grilleCountSoFar = new AtomicLong(0);
+        this.grilleCountAtMilestoneStart = 0;
+        this.bestGrillesPerSecond = 0;
         
         this.implDetails = implDetails;
     }

@@ -23,7 +23,7 @@ public class TurningGrilleCrackerProducerConsumer
     private ConcurrentLinkedQueue<Thread> consumerThreads;
     private AtomicInteger shutdownNConsumers;
     
-    private Lock milestoneReportMutex;
+    private Lock milestoneStateMutex;
     private int improving;
     private boolean addingThreads;
     long prevGrillesPerSecond;
@@ -42,12 +42,12 @@ public class TurningGrilleCrackerProducerConsumer
         this.consumerThreads = new ConcurrentLinkedQueue<>();
         this.shutdownNConsumers = new AtomicInteger(0);
         
+        this.milestoneStateMutex = new ReentrantLock(false);
         this.improving = 0;
         this.addingThreads = true;
         this.prevGrillesPerSecond = 0;
         this.bestConsumerCount = 0;
         this.bestGrillesPerSecond = 0;
-        this.milestoneReportMutex = new ReentrantLock(false);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class TurningGrilleCrackerProducerConsumer
     @Override
     public void tryMilestone(TurningGrilleCracker cracker, long milestoneEnd, long grilleCountSoFar)
     {
-    	if (this.milestoneReportMutex.tryLock())
+    	if (this.milestoneStateMutex.tryLock())
     	{
     		try
     		{
@@ -140,7 +140,7 @@ public class TurningGrilleCrackerProducerConsumer
     		}
     		finally
     		{
-    			this.milestoneReportMutex.unlock();
+    			this.milestoneStateMutex.unlock();
     		}
     	}
     }
@@ -194,6 +194,7 @@ public class TurningGrilleCrackerProducerConsumer
     private Thread startConsumerThread(TurningGrilleCracker cracker)
     {
         this.consumerCount.getAndIncrement();
+        
         Thread consumerThread = new Thread(() ->
         {
             while (true)
@@ -204,7 +205,6 @@ public class TurningGrilleCrackerProducerConsumer
             		this.consumerCount.getAndDecrement();
             		break;
             	}
-        
             	long grilleCountSoFar = cracker.applyGrille(grille);
                 cracker.registerOneAppliedGrill(grilleCountSoFar);
                 
@@ -214,7 +214,7 @@ public class TurningGrilleCrackerProducerConsumer
 	                {
 	                	if (this.consumerCount.getAndDecrement() > 1)	// There should be at least one consumer running.
 						{
-							return;
+							break;
 						}
 						else
 						{

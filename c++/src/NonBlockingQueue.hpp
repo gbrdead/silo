@@ -202,7 +202,8 @@ public:
 };
 
 template <class E>
-OneTBB_PortionQueue<E>::OneTBB_PortionQueue()
+OneTBB_PortionQueue<E>::OneTBB_PortionQueue() :
+	queue()
 {
 }
 

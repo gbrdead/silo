@@ -28,7 +28,6 @@ public class TurningGrilleCrackerSerial
     		{
     			break;
     		}
-
     		long grilleCountSoFar = cracker.applyGrille(grille);
 
             if (grilleCountSoFar % (cracker.grilleCount / 1000) == 0)   // A milestone every 0.1%.

@@ -60,9 +60,9 @@ public class BlockingPortionQueue<E>
     }
 	
 	@Override
-    public void stopConsumers(Collection<Thread> consumerThreads)
+    public void stopConsumers(Collection<Thread> finalConsumerThreads)
 	{
-	    for (Thread consumerThread : consumerThreads)
+	    for (Thread consumerThread : finalConsumerThreads)
 	    {
 	        consumerThread.interrupt();
 	    }

@@ -23,28 +23,29 @@ namespace org::voidland::concurrent::turning_grille
 {
 
 
+boost::regex NOT_ENGLISH_LETTERS_RE("[^A-Z]");
+
+
 TurningGrilleCrackerImplDetails::~TurningGrilleCrackerImplDetails()
 {
 }
 
 std::string TurningGrilleCrackerImplDetails::milestonesSummary(TurningGrilleCracker& cracker)
 {
-	return std::string();
+	return "";
 }
 
 
 TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails) :
+    grilleCountSoFar(0),
     cipherText(cipherText),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
     grilleCountAtMilestoneStart(0),
     bestGrillesPerSecond(0),
-    grilleCountSoFar(0),
 	implDetails(std::move(implDetails))
 {
     boost::to_upper(this->cipherText);
-
-    const static boost::regex nonLettersRe("[^A-Z]");
-    if (boost::regex_match(this->cipherText, nonLettersRe))
+    if (boost::regex_match(this->cipherText, NOT_ENGLISH_LETTERS_RE))
     {
         throw std::invalid_argument("The ciphertext must contain only English letters.");
     }
@@ -179,7 +180,9 @@ TurningGrilleCrackerProducerConsumer::TurningGrilleCrackerProducerConsumer(unsig
     producerCount(producerCount),
     portionQueue(std::move(portionQueue)),
     consumerCount(0),
+	consumerThreads(),
 	shutdownNConsumers(0),
+	milestoneStateMutex(),
     improving(0),
     addingThreads(true),
     prevGrillesPerSecond(0),
@@ -324,6 +327,7 @@ void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads(TurningGr
 std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGrilleCracker& cracker)
 {
     this->consumerCount++;
+
     return std::thread
         {
             [this, &cracker]
@@ -336,7 +340,6 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
                 		this->consumerCount--;
                 		break;
                 	}
-
                 	uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
                     cracker.registerOneAppliedGrill(grilleCountSoFar);
 
@@ -365,7 +368,9 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
 
 
 TurningGrilleCrackerSyncless::TurningGrilleCrackerSyncless() :
-	workersCount(0)
+	workersCount(0),
+	milestoneStateMutex(),
+	grilleIntervalsCompletion()
 {
 }
 
@@ -379,54 +384,6 @@ void TurningGrilleCrackerSyncless::bruteForce(TurningGrilleCracker& cracker)
     {
         workerThread.join();
     }
-}
-
-std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
-{
-	std::vector<std::thread> workerThreads;
-	workerThreads.reserve(workerCount);
-
-	this->grilleIntervalsCompletion.reserve(workerCount);
-
-    uint64_t nextIntervalBegin = 0;
-    uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
-    for (unsigned i = 0; i < workerCount; i++)
-    {
-    	this->workersCount++;
-
-    	uint64_t nextIntervalEnd = (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount;
-    	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
-
-    	this->grilleIntervalsCompletion.emplace_back(std::make_pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>(
-				std::make_unique<std::atomic<uint64_t>>(0),
-				(nextIntervalEnd - nextIntervalBegin)));
-    	std::atomic<uint64_t> *processedGrillsCount = this->grilleIntervalsCompletion.back().first.get();
-
-        workerThreads.push_back(std::thread
-            {
-                [this, &cracker, grilleInterval = std::move(grilleInterval), processedGrillsCount]
-                {
-                	while (true)
-                	{
-                		const Grille* grille = grilleInterval->getNext();
-                		if (grille == nullptr)
-						{
-                			break;
-						}
-
-                		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
-                        cracker.registerOneAppliedGrill(grilleCountSoFar);
-
-                        (*processedGrillsCount)++;
-                	}
-                    this->workersCount--;
-                }
-            });
-
-        nextIntervalBegin += intervalLength;
-    }
-
-    return workerThreads;
 }
 
 void TurningGrilleCrackerSyncless::tryMilestone(TurningGrilleCracker& cracker, const std::chrono::steady_clock::time_point& milestoneEnd, uint64_t grilleCountSoFar)
@@ -465,6 +422,52 @@ void TurningGrilleCrackerSyncless::tryMilestone(TurningGrilleCracker& cracker, c
     }
 }
 
+std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(TurningGrilleCracker& cracker, unsigned workerCount)
+{
+	std::vector<std::thread> workerThreads;
+	workerThreads.reserve(workerCount);
+
+	this->grilleIntervalsCompletion.reserve(workerCount);
+
+    uint64_t nextIntervalBegin = 0;
+    uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
+    for (unsigned i = 0; i < workerCount; i++)
+    {
+    	this->workersCount++;
+
+    	uint64_t nextIntervalEnd = (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount;
+    	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
+
+    	this->grilleIntervalsCompletion.emplace_back(std::make_pair<std::unique_ptr<std::atomic<uint64_t>>, uint64_t>(
+				std::make_unique<std::atomic<uint64_t>>(0),
+				(nextIntervalEnd - nextIntervalBegin)));
+    	std::atomic<uint64_t> *processedGrillsCount = this->grilleIntervalsCompletion.back().first.get();
+
+        workerThreads.push_back(std::thread
+            {
+                [this, &cracker, grilleInterval = std::move(grilleInterval), processedGrillsCount]
+                {
+                	while (true)
+                	{
+                		const Grille* grille = grilleInterval->getNext();
+                		if (grille == nullptr)
+						{
+                			break;
+						}
+                		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
+                        cracker.registerOneAppliedGrill(grilleCountSoFar);
+
+                        (*processedGrillsCount)++;
+                	}
+                    this->workersCount--;
+                }
+            });
+
+        nextIntervalBegin += intervalLength;
+    }
+
+    return workerThreads;
+}
 
 
 TurningGrilleCrackerSerial::TurningGrilleCrackerSerial()
@@ -484,7 +487,6 @@ void TurningGrilleCrackerSerial::bruteForce(TurningGrilleCracker& cracker)
 		{
 			break;
 		}
-
 		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
 
         if (grilleCountSoFar % (cracker.grilleCount / 1000) == 0)   // A milestone every 0.1%.

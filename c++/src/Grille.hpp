@@ -20,7 +20,6 @@ private:
 public:
     Grille();
     Grille(unsigned halfSideLength, uint64_t ordinal);
-    Grille(unsigned halfSideLength, std::vector<uint8_t>&& holes);
     Grille(const Grille& other);
     Grille(Grille&& other);
 
@@ -59,12 +58,6 @@ inline Grille::Grille(Grille&& other) :
     holes(std::move(other.holes))
 {
     other.halfSideLength = 0;
-}
-
-inline Grille::Grille(unsigned halfSideLength, std::vector<uint8_t>&& holes) :
-    halfSideLength(halfSideLength),
-    holes(std::move(holes))
-{
 }
 
 inline Grille& Grille::operator=(const Grille& other)

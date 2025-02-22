@@ -5,7 +5,9 @@ use std::result::Result;
 
 pub trait NonBlockingQueue<E> : Send + Sync
 {
-    fn setSizeParameters(&mut self, producerCount: usize, maxSize: usize);
+    fn setSizeParameters(&mut self, _producerCount: usize, _maxSize: usize)
+    {
+    }
 
     fn tryEnqueue(&self, portion: E) -> Result<(), E>;
     fn tryDequeue(&self) -> Option<E>;

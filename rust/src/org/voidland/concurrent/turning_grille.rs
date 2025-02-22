@@ -24,15 +24,22 @@ use std::time::Instant;
 use std::time::Duration;
 use regex::Regex;
 use std::string::String;
+use std::sync::LazyLock;
 use concurrent_queue::ConcurrentQueue;
+
+
+static NOT_ENGLISH_LETTERS_RE: LazyLock<Regex> = LazyLock::new(||
+    {
+        Regex::new(r"[^A-Z]").unwrap()
+    });
 
 
 #[derive(Clone)]
 struct TurningGrilleCrackerMilestoneState
 {
-    grilleCountAtMilestoneStart: u64,
     start: Instant,
     milestoneStart: Instant,
+    grilleCountAtMilestoneStart: u64,
     bestGrillesPerSecond: u64
 }
 
@@ -42,9 +49,9 @@ impl TurningGrilleCrackerMilestoneState
     {
         Self
         {
-            grilleCountAtMilestoneStart: 0,
             start: Instant::now(),
             milestoneStart: Instant::now(),
+            grilleCountAtMilestoneStart: 0,
             bestGrillesPerSecond: 0
         }
     }
@@ -62,7 +69,7 @@ pub trait TurningGrilleCrackerImplDetails : Send + Sync
                 
     fn milestonesSummary(self: Arc<Self>, _cracker: &Arc<TurningGrilleCracker>) -> String
     {
-        String::new()
+        String::from("")
     }
 }
 
@@ -89,8 +96,7 @@ impl TurningGrilleCracker
     pub fn new(cipherText: &str, implDetails: Box<dyn TurningGrilleCrackerImplDetails>) -> Self
     {
         let cipherText: String = cipherText.to_uppercase();
-        let nonLettersRe = Regex::new(r"[^A-Z]").unwrap();
-        if nonLettersRe.is_match(&cipherText)
+        if NOT_ENGLISH_LETTERS_RE.is_match(&cipherText)
         {
             panic!("The ciphertext must contain only English letters.");
         }
@@ -133,7 +139,6 @@ impl TurningGrilleCracker
         
         let end: Instant = Instant::now();
         let milestoneState: TurningGrilleCrackerMilestoneState = self.implDetails.clone().cloneCrackerMilestoneState();
-        
         let elapsedTimeNs: u128 = end.duration_since(milestoneState.start).as_nanos();
         let grillsPerSecond: u64 = ((self.grilleCount as u128 * Duration::from_secs(1).as_nanos()) / elapsedTimeNs) as u64;
         

@@ -13,7 +13,9 @@
 #include <atomic>
 #include <vector>
 #include <optional>
+#include <boost/algorithm/string/regex.hpp>
 #include "concurrentqueue/concurrentqueue.h"
+
 
 using namespace org::voidland::concurrent;
 
@@ -28,6 +30,9 @@ extern bool VERBOSE;
 
 namespace org::voidland::concurrent::turning_grille
 {
+
+
+extern boost::regex NOT_ENGLISH_LETTERS_RE;
 
 
 class TurningGrilleCracker;
@@ -64,9 +69,8 @@ private:
     WordsTrie wordsTrie;
 
     std::chrono::steady_clock::time_point start;
-
-    uint64_t grilleCountAtMilestoneStart;
     std::chrono::steady_clock::time_point milestoneStart;
+    uint64_t grilleCountAtMilestoneStart;
     uint64_t bestGrillesPerSecond;
 
     std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails;

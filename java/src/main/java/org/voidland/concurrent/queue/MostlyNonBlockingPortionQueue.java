@@ -13,9 +13,9 @@ public class MostlyNonBlockingPortionQueue<E>
     private AtomicInteger size;
     private boolean workDone;
     
-    private Object notFullCondition = new Object();
-    private Object notEmptyCondition = new Object();
-    private Object emptyCondition = new Object();
+    private Object notFullCondition;
+    private Object notEmptyCondition;
+    private Object emptyCondition;
     
     
     public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> nonBlockingQueue)
@@ -25,6 +25,10 @@ public class MostlyNonBlockingPortionQueue<E>
         this.size = new AtomicInteger(0);
         this.workDone = false;
         
+        this.notFullCondition = new Object();
+        this.notEmptyCondition = new Object();
+        this.emptyCondition = new Object();
+
         this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
     
@@ -35,20 +39,24 @@ public class MostlyNonBlockingPortionQueue<E>
         {
             int newSize = this.size.incrementAndGet();
             
-            do
+            while (true)
             {
-                if (this.size.get() > this.maxSize)
+                if (this.size.get() >= this.maxSize)
                 {
                     synchronized (this.notFullCondition)
                     {
-                        if (this.size.get() > this.maxSize)
+                        while (this.size.get() >= this.maxSize)
                         {
                             this.notFullCondition.wait();
                         }
                     }
                 }
+                
+                if (this.nonBlockingQueue.tryEnqueue(portion))
+                {
+                	break;
+                }
             }
-            while (!this.nonBlockingQueue.tryEnqueue(portion));
     
             if (newSize == this.maxSize * 1 / 4)
             {
@@ -69,20 +77,25 @@ public class MostlyNonBlockingPortionQueue<E>
     {
         try
         {
-            E portion;
+            E portion = this.nonBlockingQueue.tryDequeue();
     
-            if ((portion = this.nonBlockingQueue.tryDequeue()) == null)
+            if (portion == null)
             {
                 synchronized (this.notEmptyCondition)
                 {
-                    while ((portion = this.nonBlockingQueue.tryDequeue()) == null)
-                    {
+                	while (true)
+                	{
                         if (this.workDone)
                         {
                             return null;
                         }
+                        portion = this.nonBlockingQueue.tryDequeue();
+                        if (portion != null)
+                        {
+                        	break;
+                        }
                         this.notEmptyCondition.wait();
-                    }
+                	}
                 }
             }
             
@@ -135,11 +148,11 @@ public class MostlyNonBlockingPortionQueue<E>
     }
 
     @Override
-    public void stopConsumers(Collection<Thread> consumerThreads)
+    public void stopConsumers(Collection<Thread> finalConsumerThreads)
     {
-        this.workDone = true;
         synchronized (this.notEmptyCondition)
         {
+        	this.workDone = true;
             this.notEmptyCondition.notifyAll();
         }
     }

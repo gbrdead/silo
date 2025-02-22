@@ -21,14 +21,16 @@ class TextbookPortionQueue :
     public MPMC_PortionQueue<E>
 {
 private:
+	std::queue<E> queue;
+	bool workDone;
+
     std::size_t maxSize;
-    std::queue<E> queue;
 
     // Not using counting_semaphore because of https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104928 .
     std::mutex mutex;
     std::condition_variable notEmptyCondition;
     std::condition_variable notFullCondition;
-    bool workDone;
+
 
 public:
     TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
@@ -45,8 +47,12 @@ public:
 
 template <class E>
 TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
+	queue(),
     maxSize(initialConsumerCount * producerCount * 1000),
-    workDone(false)
+    workDone(false),
+	mutex(),
+	notEmptyCondition(),
+	notFullCondition()
 {
 }
 
@@ -155,7 +161,8 @@ public:
 
 template <class E>
 OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    maxSize(initialConsumerCount * producerCount * 1000)
+    maxSize(initialConsumerCount * producerCount * 1000),
+	queue()
 {
     this->queue.set_capacity(this->maxSize);
 }

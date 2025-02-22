@@ -11,25 +11,27 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TextbookPortionQueue<E> 
 	implements MPMC_PortionQueue<E>
 {
-	private int maxSize;
 	private Queue<E> queue;
+	private boolean workDone;
+	
+	private int maxSize;
 	
 	// Not using Semaphore in order to be 1:1 with the C++ version.
 	private Lock mutex;
 	private Condition notEmptyCondition;
 	private Condition notFullCondition;
-	private boolean workDone;
 	
 	
 	public TextbookPortionQueue(int initialConsumerCount, int producerCount)
 	{
 		this.maxSize = initialConsumerCount * producerCount * 1000;
+		
 		this.queue = new ArrayDeque<>(this.maxSize);
+		this.workDone = false;
 		
 		this.mutex = new ReentrantLock(false);
 		this.notEmptyCondition = this.mutex.newCondition();
 		this.notFullCondition = this.mutex.newCondition();
-		this.workDone = false;
 	}
 	
 	@Override
@@ -99,7 +101,7 @@ public class TextbookPortionQueue<E>
 	}
 
 	@Override
-	public void stopConsumers(Collection<Thread> consumerThreads)
+	public void stopConsumers(Collection<Thread> finalConsumerThreads)
 	{
         this.mutex.lock();
         try

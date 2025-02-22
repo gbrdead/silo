@@ -1,8 +1,8 @@
 #include "WordsTrie.hpp"
+#include "TurningGrilleCracker.hpp"
 
 #include <fstream>
 #include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/regex.hpp>
 
 
 namespace org::voidland::concurrent::turning_grille
@@ -30,9 +30,7 @@ void WordsTrie::loadWords(const std::string& wordsFilePath)
     for (std::string word; std::getline(wordsStream, word); )
     {
         boost::to_upper(word);
-
-        const static boost::regex nonLettersRe("[^A-Z]");
-        boost::erase_all_regex(word, nonLettersRe);
+        boost::erase_all_regex(word, NOT_ENGLISH_LETTERS_RE);
 
         if (word.length() >= 3) // Short words significantly increase the count of false positives.
         {
@@ -49,7 +47,7 @@ void WordsTrie::addWord(TrieNode& parent, const char* c)
         return;
     }
     TrieNode& child = parent.getOrCreateChild(*c);
-    WordsTrie::addWord(child, c+1);
+    WordsTrie::addWord(child, c + 1);
 }
 
 

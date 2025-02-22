@@ -1,7 +1,7 @@
 use std::string::String;
 use std::fs::read_to_string;
-use regex::Regex;
 use core::str::Chars;
+use super::NOT_ENGLISH_LETTERS_RE;
 
 
 const NUMBER_OF_LETTERS: usize = ('Z' as usize) - ('A' as usize) + 1;
@@ -38,7 +38,7 @@ impl TrieNode
         let child: &Option<Box<Self>> = &self.children[i];
         match child
         {
-            Some(realChild) => Some(realChild.as_ref()),
+            Some(child) => Some(child.as_ref()),
             None => None
         }
     }
@@ -73,14 +73,54 @@ impl WordsTrie
 		ret.loadWords(wordsFilePath);
 		ret
 	}
-	
-	fn loadWords(&mut self, wordsFilePath: &str)
+    
+    #[inline]
+    pub fn countWords(&self, text: &str) -> usize
+    {
+        let mut iterators: Vec<Option<&TrieNode>> = vec![None; text.len() + 1];
+        iterators[0] = Some(&self.root);
+        
+        let mut words: usize = 0;
+        for c in text.chars()
+        {
+            let mut i: usize = 0;
+            let mut j: usize = 0;
+            
+            while let Some(currentNode) = iterators[i]
+            {
+                let nextIterator: Option<&TrieNode> = currentNode.getChild(c);
+                iterators[i] = None;
+                i += 1;
+
+                match nextIterator
+                {
+                    None =>
+                    {
+                        continue;
+                    }
+                    Some(nextNode) =>
+                    {
+                        if nextNode.isWordEnd()
+                        {
+                            words += 1;
+                        }
+                    }
+                }
+                iterators[j] = nextIterator;
+                j += 1;
+            }
+            iterators[j] = Some(&self.root);
+        }
+        words
+    }
+
+    	fn loadWords(&mut self, wordsFilePath: &str)
 	{
 		for line in read_to_string(wordsFilePath).unwrap().lines()
 		{
 			let word: String = line.to_uppercase();
-			let nonLettersRe = Regex::new(r"[^A-Z]").unwrap();
-			let word = nonLettersRe.replace_all(&word, "");
+			let word = NOT_ENGLISH_LETTERS_RE.replace_all(&word, "");
+            
 			if word.chars().count() >= 3
 			{
 				Self::addWord(&mut self.root, word.chars());
@@ -104,57 +144,5 @@ impl WordsTrie
             }
         };
 		Self::addWord(child, ci);
-	}
-	
-    #[inline]
-	pub fn countWords(&self, text: &str) -> usize
-	{
-		let mut iterators: Vec<Option<&TrieNode>> = vec![None; text.len() + 1];
-		iterators[0] = Some(&self.root);
-        
-        let mut words: usize = 0;
-        for c in text.chars()
-        {
-    		let mut i: usize = 0;
-    		let mut j: usize = 0;
-            
-            loop
-            {
-                let nextIterator: Option<&TrieNode>;
-                match iterators[i]
-                {
-                    None =>
-                    {
-                        break;
-                    }
-                    Some(currentNode) =>
-                    {
-                       nextIterator = currentNode.getChild(c);
-                    }
-                }
-                iterators[i] = None;
-                i += 1;
-
-                match nextIterator
-                {
-                    None =>
-                    {
-                        continue;
-                    }
-                    Some(nextNode) =>
-                    {
-                        if nextNode.isWordEnd()
-                        {
-                            words += 1;
-                        }
-                    }
-                }
-    			iterators[j] = nextIterator;
-    			j += 1;
-    		}
-    		iterators[j] = Some(&self.root);
-        }
-		
-		words
 	}
 }

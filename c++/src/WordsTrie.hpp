@@ -37,12 +37,10 @@ inline TrieNode& TrieNode::getOrCreateChild(char c)
 {
     int i = c - 'A';
     std::unique_ptr<TrieNode>& charTrieNode = this->children.at(i);
-
     if (!charTrieNode)
     {
         charTrieNode = std::make_unique<TrieNode>();
     }
-
     return *charTrieNode;
 }
 
@@ -94,7 +92,7 @@ inline unsigned WordsTrie::countWords(const std::string& text)
         {
             const TrieNode* nextIterator = (*i)->getChild(*c);
             *i = nullptr;
-            i++;
+            ++i;
 
             if (!nextIterator)
             {
@@ -107,7 +105,7 @@ inline unsigned WordsTrie::countWords(const std::string& text)
             }
 
             *j = nextIterator;
-            j++;
+            ++j;
         }
         *j = this->root.get();
     }

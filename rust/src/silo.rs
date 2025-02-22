@@ -63,7 +63,7 @@ fn main()
     
     let args: Vec<String> = env::args().collect();
     let arg: &str;
-    if args.len() > 1
+    if args.len() >= 2
     {
         arg = &args[1];
     }
