@@ -14,12 +14,14 @@ struct TrieNode
 
 impl TrieNode
 {
+    const NONE: Option<Box<Self>> = None;
+    
     #[inline]
     pub fn new() -> Self
     {
         Self
         {
-            children: [const { None }; NUMBER_OF_LETTERS],
+            children: [Self::NONE; NUMBER_OF_LETTERS],
             wordEnd: false
         }
     }

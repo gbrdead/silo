@@ -1,5 +1,3 @@
-#![allow(private_interfaces)]
-
 mod words_trie;
 mod grille;
 
@@ -24,19 +22,19 @@ use std::thread::available_parallelism;
 use std::time::Instant;
 use std::time::Duration;
 use std::string::String;
-use std::sync::LazyLock;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use concurrent_queue::ConcurrentQueue;
 
 
-pub static NOT_CAPITAL_ENGLISH_LETTERS_RE: LazyLock<Regex> = LazyLock::new(||
+pub static NOT_CAPITAL_ENGLISH_LETTERS_RE: Lazy<Regex> = Lazy::new(||
     {
         Regex::new(r"[^A-Z]").unwrap()
     });
 
 
 #[derive(Clone)]
-struct TurningGrilleCrackerMilestoneState
+pub struct TurningGrilleCrackerMilestoneState
 {
     start: Instant,
     milestoneStart: Instant,
@@ -91,7 +89,7 @@ pub struct TurningGrilleCracker
 
 impl TurningGrilleCracker
 {
-    const WORDS_FILE_PATH: &str = "3000words.txt";
+    const WORDS_FILE_PATH: &'static str = "3000words.txt";
     const MIN_DETECTED_WORD_COUNT: usize = 17;  // Determined by gut feeling.
     
     
