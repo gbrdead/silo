@@ -348,18 +348,12 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
             let mut milestoneState = milestoneTryLock.unwrap();
             
             let queueSize: usize = self.portionQueue.getSize();
-            let blockedProducers: usize = self.portionQueue.getBlockedProducers();
-            let blockedConsumers: usize = self.portionQueue.getBlockedConsumers();
             
             let mut milestoneStatus: String = String::new();
             if cracker.VERBOSE
             {
                 milestoneStatus.push_str("consumers: ");
                 milestoneStatus.push_str(self.consumerCount.load(Ordering::Relaxed).to_string().as_str());
-                milestoneStatus.push_str("; blocked consumers: ");
-                milestoneStatus.push_str(blockedConsumers.to_string().as_str());
-                milestoneStatus.push_str("; blocked producers: ");
-                milestoneStatus.push_str(blockedProducers.to_string().as_str());
                 milestoneStatus.push_str("; queue size: ");
                 milestoneStatus.push_str(queueSize.to_string().as_str());
                 milestoneStatus.push_str("/");

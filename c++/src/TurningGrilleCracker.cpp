@@ -227,15 +227,12 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
     	std::lock_guard milestoneStateLock(this->milestoneStateMutex, std::adopt_lock);
 
 		std::size_t queueSize = this->portionQueue->getSize();
-		unsigned blockedProducers = this->portionQueue->getBlockedProducers();
-		unsigned blockedConsumers = this->portionQueue->getBlockedConsumers();
 
 		std::string milestoneStatus;
 		if (VERBOSE)
 		{
 			std::ostringstream s;
 			s << "consumers: " << this->consumerCount.load(std::memory_order_relaxed);
-			s << "; blocked consumers: " << blockedConsumers << "; blocked producers: " << blockedProducers;
 			s << "; queue size: " << queueSize << "/" << this->portionQueue->getMaxSize();
 			milestoneStatus = s.str();
 		}

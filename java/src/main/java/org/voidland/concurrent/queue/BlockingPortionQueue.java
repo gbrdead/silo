@@ -3,7 +3,6 @@ package org.voidland.concurrent.queue;
 import java.util.Collection;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class BlockingPortionQueue<E> 
@@ -12,23 +11,16 @@ public class BlockingPortionQueue<E>
     private int maxSize;
 	private BlockingQueue<E> queue;
 	
-    private AtomicInteger blockedProducers;
-    private AtomicInteger blockedConsumers;
-	
 	
 	public BlockingPortionQueue(int initialConsumerCount, int producerCount)
 	{
 	    this.maxSize = initialConsumerCount * producerCount * 1000;
 		this.queue = new ArrayBlockingQueue<>(this.maxSize);
-		
-        this.blockedProducers = new AtomicInteger(0);
-        this.blockedConsumers = new AtomicInteger(0);
 	}
 	
 	@Override
 	public void addPortion(E portion)
 	{
-		this.blockedProducers.getAndIncrement();
 	    try
 	    {
 	        this.queue.put(portion);
@@ -37,28 +29,18 @@ public class BlockingPortionQueue<E>
 	    {
 	        throw new RuntimeException(e);
 	    }
-	    finally
-	    {
-	    	this.blockedProducers.getAndDecrement();	
-	    }
 	}
 	
 	@Override
 	public E retrievePortion()
 	{
-		this.blockedConsumers.getAndIncrement();
 	    try
 	    {
-	    	
 	        return this.queue.take();
 	    }
 	    catch (InterruptedException e)
 	    {
 	        return null;
-	    }
-	    finally
-	    {
-	    	this.blockedConsumers.getAndDecrement();	
 	    }
 	}
 	
@@ -96,17 +78,5 @@ public class BlockingPortionQueue<E>
     public int getMaxSize()
     {
         return this.maxSize;
-    }
-    
-    @Override
-    public int getBlockedProducers()
-    {
-    	return this.blockedProducers.get();
-    }
-    
-    @Override
-    public int getBlockedConsumers()
-    {
-    	return this.blockedConsumers.get();
     }
 }

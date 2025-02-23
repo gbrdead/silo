@@ -3,7 +3,6 @@ package org.voidland.concurrent.queue;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -17,13 +16,10 @@ public class TextbookPortionQueue<E>
 	
 	private int maxSize;
 	
-	// Not using Semaphore in order to be 1:1 with the C++ version.
+	// Not using Semaphore in order to be 1:1 with the C++ version. Semaphore seems to be slower anyway.
 	private Lock mutex;
 	private Condition notEmptyCondition;
 	private Condition notFullCondition;
-	
-    private AtomicInteger blockedProducers;
-    private AtomicInteger blockedConsumers;
 	
 	
 	public TextbookPortionQueue(int initialConsumerCount, int producerCount)
@@ -36,15 +32,11 @@ public class TextbookPortionQueue<E>
 		this.mutex = new ReentrantLock(false);
 		this.notEmptyCondition = this.mutex.newCondition();
 		this.notFullCondition = this.mutex.newCondition();
-		
-        this.blockedProducers = new AtomicInteger(0);
-        this.blockedConsumers = new AtomicInteger(0);
 	}
 	
 	@Override
     public void addPortion(E work)
 	{
-		this.blockedProducers.getAndIncrement();
 	    this.mutex.lock();
 	    try
 	    {
@@ -52,24 +44,20 @@ public class TextbookPortionQueue<E>
 	        {
 	            this.notFullCondition.awaitUninterruptibly();
 	        }
-	        this.blockedProducers.getAndDecrement();
 
 	        this.queue.add(work);
 
-	        this.blockedProducers.getAndIncrement();
 	        this.notEmptyCondition.signal();
 	    }
 	    finally
 	    {
 	        this.mutex.unlock();
-	        this.blockedProducers.getAndDecrement();
 	    }
 	}
 	
 	@Override
     public E retrievePortion()
 	{
-		this.blockedConsumers.getAndIncrement();
         this.mutex.lock();
         try
         {
@@ -82,11 +70,9 @@ public class TextbookPortionQueue<E>
 
                 this.notEmptyCondition.awaitUninterruptibly();
             }
-            this.blockedConsumers.getAndDecrement();
 
             E portion = this.queue.poll();
 
-            this.blockedConsumers.getAndIncrement();    
             this.notFullCondition.signal();
             
             return portion;
@@ -94,7 +80,6 @@ public class TextbookPortionQueue<E>
         finally
         {
             this.mutex.unlock();
-            this.blockedConsumers.getAndDecrement();
         }
 	}
 	
@@ -149,17 +134,5 @@ public class TextbookPortionQueue<E>
     public int getMaxSize()
     {
 	    return this.maxSize;
-    }
-    
-    @Override
-    public int getBlockedProducers()
-    {
-    	return this.blockedProducers.get();
-    }
-    
-    @Override
-    public int getBlockedConsumers()
-    {
-    	return this.blockedConsumers.get();
     }
 }

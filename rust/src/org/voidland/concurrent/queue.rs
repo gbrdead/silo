@@ -20,7 +20,4 @@ pub trait MPMC_PortionQueue<E> : Send + Sync
     
     fn getSize(&self) -> usize;
     fn getMaxSize(&self) -> usize;
-    
-    fn getBlockedProducers(&self) -> usize;
-    fn getBlockedConsumers(&self) -> usize;
 }

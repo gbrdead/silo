@@ -17,9 +17,6 @@ public class MostlyNonBlockingPortionQueue<E>
     private Object notEmptyCondition;
     private Object emptyCondition;
     
-    private AtomicInteger blockedProducers;
-    private AtomicInteger blockedConsumers;
-    
     
     public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> nonBlockingQueue)
     {
@@ -31,9 +28,6 @@ public class MostlyNonBlockingPortionQueue<E>
         this.notFullCondition = new Object();
         this.notEmptyCondition = new Object();
         this.emptyCondition = new Object();
-        
-        this.blockedProducers = new AtomicInteger(0);
-        this.blockedConsumers = new AtomicInteger(0);
 
         this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
@@ -49,7 +43,6 @@ public class MostlyNonBlockingPortionQueue<E>
             {
                 if (this.size.get() >= this.maxSize)
                 {
-                	this.blockedProducers.getAndIncrement();
                     synchronized (this.notFullCondition)
                     {
                         while (this.size.get() >= this.maxSize)
@@ -57,7 +50,6 @@ public class MostlyNonBlockingPortionQueue<E>
                             this.notFullCondition.wait();
                         }
                     }
-                    this.blockedProducers.getAndDecrement();
                 }
                 
                 if (this.nonBlockingQueue.tryEnqueue(portion))
@@ -68,12 +60,10 @@ public class MostlyNonBlockingPortionQueue<E>
     
             if (newSize == this.maxSize * 1 / 4)
             {
-            	this.blockedProducers.getAndIncrement();
                 synchronized (this.notEmptyCondition)
                 {
                     this.notEmptyCondition.notifyAll();
                 }
-                this.blockedProducers.getAndDecrement();
             }
         }
         catch (InterruptedException e)
@@ -91,14 +81,12 @@ public class MostlyNonBlockingPortionQueue<E>
     
             if (portion == null)
             {
-            	this.blockedConsumers.getAndIncrement();
                 synchronized (this.notEmptyCondition)
                 {
                 	while (true)
                 	{
                         if (this.workDone)
                         {
-                        	this.blockedConsumers.getAndDecrement();
                             return null;
                         }
                         portion = this.nonBlockingQueue.tryDequeue();
@@ -109,27 +97,22 @@ public class MostlyNonBlockingPortionQueue<E>
                         this.notEmptyCondition.wait();
                 	}
                 }
-                this.blockedConsumers.getAndDecrement();
             }
             
             int newSize = this.size.decrementAndGet();
             if (newSize == this.maxSize * 3 / 4)
             {
-            	this.blockedConsumers.getAndIncrement();
                 synchronized (this.notFullCondition)
                 {
                     this.notFullCondition.notifyAll();
                 }
-                this.blockedConsumers.getAndDecrement();
             }
             if (newSize == 0)
             {
-            	this.blockedConsumers.getAndIncrement();
                 synchronized (this.emptyCondition)
                 {
                     this.emptyCondition.notify();
                 }
-                this.blockedConsumers.getAndDecrement();
             }
     
             return portion;
@@ -184,17 +167,5 @@ public class MostlyNonBlockingPortionQueue<E>
     public int getMaxSize()
     {
         return this.maxSize;
-    }
-    
-    @Override
-    public int getBlockedProducers()
-    {
-    	return this.blockedProducers.get();
-    }
-    
-    @Override
-    public int getBlockedConsumers()
-    {
-    	return this.blockedConsumers.get();
     }
 }
