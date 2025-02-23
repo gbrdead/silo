@@ -35,27 +35,29 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 | Implementation | Queue type | Non-blocking | Suffers from scheduler unfairness |
 |---|---|---|---|
-| syncless | queueless, with no synchronization overhead | yes | yes |
-| atomic | [atomic_queue](https://max0x7ba.github.io/atomic_queue/) | mostly | no |
-| concurrent | [moodycamel::ConcurrentQueue](https://github.com/cameron314/concurrentqueue) | mostly | no |
-| lockfree | [Boost lockfree queue](https://www.boost.org/doc/libs/release/doc/html/lockfree.html) | mostly | no |
-| textbook | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | no |
-| onetbb | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly (?) | no |
-| onetbb_bounded | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | mostly (?) | no |
+| `concurrent` | [moodycamel::ConcurrentQueue](https://github.com/cameron314/concurrentqueue) | mostly | no |
+| `atomic` | [atomic_queue](https://max0x7ba.github.io/atomic_queue/) | mostly | no |
+| `lockfree` | [Boost lockfree queue](https://www.boost.org/doc/libs/release/doc/html/lockfree.html) | mostly | no |
+| `onetbb` | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly (?) | no |
+| `onetbb_bounded` | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | mostly (?) | no |
+| `textbook` | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | no |
 | sync_bounded | [Boost synchronous bounded queue](https://www.boost.org/doc/libs/release/doc/html/thread/sds.html#thread.sds.synchronized_queues.ref.sync_bounded_queue_ref) | no | no (?) |
+| `syncless` | queueless, with no synchronization overhead | yes | yes |
+| `serial` | single-threaded | N/A | N/A |
 
 ## Test results
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| syncless |  |  | 4736 |
-| concurrent |  |  | 3388 |
-| atomic |  |  | 3526 |
-| lockfree |  |  | 3009 |
-| textbook |  |  | 1694 |
-| onetbb |  |  | 1217 |
-| onetbb_bounded |  |  | 1068 |
-| serial |  |  | 886 |
+| concurrent |  |  |  |
+| atomic |  |  |  |
+| lockfree |  |  |  |
+| textbook |  |  |  |
+| syncless |  |  |  |
+| serial |  |  |  |
+| onetbb |  |  |  |
+| onetbb_bounded |  |  |  |
+| sync_bounded |  |  |  |
 
 General results:
 - `concurrent` and `atomic` have almost the same performance and can be considered as co-winners among the queues.
@@ -63,8 +65,8 @@ General results:
 Some remarks: 
 - The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done. As a result, the CPUs are not fully utilized for just a small amount of time and the average speed is not significantly affected.
 - At first glance, `oneapi::tbb::concurrent_bounded_queue` should work like `org::voidland::concurrent::MostlyNonBlockingPortionQueue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low for this to be true.
-- The average speed of the oneTBB queues is unexplainably low. Also, their performance is erratic - the speed varies wildly (no other implementation behaves in this way).
-- `boost::sync_bounded_queue` is not tested because it is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a dead lock.
+- The average speed of the oneTBB queues is unexplainably low. Also, their performance is erratic - the speed varies wildly (the other implementations do not behave in this way).
+- `boost::sync_bounded_queue` is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock.
 
 ## TODO
 - Measure the performance with Clang. The tests so far have been performed with GCC.

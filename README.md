@@ -77,47 +77,48 @@ All the CPUs are set to run constantly at their base frequency for the duration 
 
 Intel Core i5-4210M
 
-| runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
+| runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
 | **C++/native** |  |  |  |
-| **Rust/native** | 718 | 675 |  |
+| **Rust/native** |  |  |  |
 | **Java/JVM** |  |  |  |
 
 Intel Core i5-10210U
 
-| runtime / test scenario | *syncless* | *best mostly non-blocking* | *textbook* |
+| runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
 | **C++/native** |  |  |  |
-| **Rust/native** | 1424 | 1272 | 654 |
+| **Rust/native** |  |  |  |
 | **Java/JVM** |  |  |  |
 
 AMD Ryzen 7735HS
 
-| runtime / scenario implementation | *syncless* | *best mostly non-blocking* | *textbook* |
+| runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 4736 | 3526 | 1694 |
-| **Rust/native** | 3967 | 2998 | 743 |
+| **C++/native** |  |  |  |
+| **Rust/native** |  |  |  |
 | **Java/JVM** |  |  |  |
 
-Sigle-core single-thread per GHz
+`serial` (single-threaded) per GHz
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
-| Intel Core i5-4210M |  | 127 |  |
-| Intel Core i5-10210U |  | 235 |  |
-| AMD Ryzen 7735HS | 277 | 219 |  |
+| Intel Core i5-4210M |  |  |  |
+| Intel Core i5-10210U |  |  |  |
+| AMD Ryzen 7735HS |  |  |  |
 
 ---
 
 General results:
 - Statically-optimized native code is about 1.5-2 times faster than dynamically-optimized JIT-compiled code. In short: C++ and Rust are significantly faster than Java for general purpose calculations.
+- Rust is not as performant as C++.
 - Non-blocking queues perform much better than blocking ones.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
 
 Conclusions:
 - If you want an algorithm to take any advantage of new CPUs it must be parallelized.
 - Use non-blocking synchronization to scale better with higher hardware parallelism.
-- If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ or Rust instead of Java.
+- If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ instead of Java and even Rust.
 
 Language/runtime-specific results:
 - [C++ results and conslusions](c++/README.md)

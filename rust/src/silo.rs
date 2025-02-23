@@ -8,7 +8,8 @@ use org::voidland::concurrent::queue::ConcurrentPortionQueue;
 use org::voidland::concurrent::queue::NonBlockingQueue;
 use org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
 use org::voidland::concurrent::queue::MPMC_PortionQueue;
-use org::voidland::concurrent::queue::TextbookPortionQueue;
+use org::voidland::concurrent::queue::StdTextbookPortionQueue;
+use org::voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
 use org::voidland::concurrent::turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
 use org::voidland::concurrent::turning_grille::Grille;
 use org::voidland::concurrent::turning_grille::TurningGrilleCracker;
@@ -100,7 +101,16 @@ fn main()
             let producerCount:usize = cpuCount;
 
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(TextbookPortionQueue::new(initialConsumerCount, producerCount));
+                Arc::new(StdTextbookPortionQueue::new(initialConsumerCount, producerCount));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
+        "textbook_pl" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount:usize = cpuCount;
+
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
+                Arc::new(ParkingLotTextbookPortionQueue::new(initialConsumerCount, producerCount));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "syncless" =>
