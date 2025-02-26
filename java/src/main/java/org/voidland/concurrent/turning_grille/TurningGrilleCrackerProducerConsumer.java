@@ -115,7 +115,7 @@ public class TurningGrilleCrackerProducerConsumer
 		            this.bestConsumerCount = this.consumerCount.get();
 		        }
 		
-		        if (cracker.grilleCountSoFar.get() < cracker.grilleCount)
+		        if (grilleCountSoFar < cracker.grilleCount)
 		        {
 		            if (grillesPerSecond < this.prevGrillesPerSecond)
 		            {

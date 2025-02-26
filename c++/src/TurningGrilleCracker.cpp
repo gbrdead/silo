@@ -119,7 +119,7 @@ uint64_t TurningGrilleCracker::applyGrille(const Grille& grille)
     std::reverse(candidateBuf.begin(), candidateBuf.end());
     this->findWordsAndReport(candidateBuf);
 
-    return ++this->grilleCountSoFar;
+    return this->grilleCountSoFar.fetch_add(1, std::memory_order_release) + 1;
 }
 
 void TurningGrilleCracker::registerOneAppliedGrill(uint64_t grilleCountSoFar)
@@ -210,8 +210,8 @@ void TurningGrilleCrackerProducerConsumer::bruteForce(TurningGrilleCracker& crac
     }
 
     this->portionQueue->ensureAllPortionsAreRetrieved();
-    while (cracker.grilleCountSoFar < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
-    this->portionQueue->stopConsumers(this->consumerCount);
+    while (cracker.grilleCountSoFar.load(std::memory_order_acquire) < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
+    this->portionQueue->stopConsumers(this->consumerCount.load(std::memory_order_relaxed));
 
     std::thread consumerThread;
     while (this->consumerThreads.try_dequeue(consumerThread))
@@ -250,7 +250,7 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
 			this->bestConsumerCount = this->consumerCount.load(std::memory_order_relaxed);
 		}
 
-		if (cracker.grilleCountSoFar < cracker.grilleCount)
+		if (grilleCountSoFar < cracker.grilleCount)
 		{
 			if (grillesPerSecond < this->prevGrillesPerSecond)
 			{
@@ -275,7 +275,7 @@ void TurningGrilleCrackerProducerConsumer::tryMilestone(TurningGrilleCracker& cr
 				}
 				else
 				{
-					this->shutdownNConsumers++;
+					this->shutdownNConsumers.fetch_add(1, std::memory_order_release);
 				}
 			}
 
@@ -335,7 +335,7 @@ void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads(TurningGr
 
 std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGrilleCracker& cracker)
 {
-    this->consumerCount++;
+    this->consumerCount.fetch_add(1, std::memory_order_relaxed);
 
     return std::thread
         {
@@ -346,28 +346,28 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
                 	std::optional<Grille> grille = this->portionQueue->retrievePortion();
                 	if (!grille.has_value())
                 	{
-                		this->consumerCount--;
+                		this->consumerCount.fetch_sub(1, std::memory_order_relaxed);
                 		break;
                 	}
                 	uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
                     cracker.registerOneAppliedGrill(grilleCountSoFar);
 
-                    if (this->shutdownNConsumers > 0)
+                    if (this->shutdownNConsumers.load(std::memory_order_relaxed) > 0)
                     {
-						if (this->shutdownNConsumers-- > 0)
+						if (this->shutdownNConsumers.fetch_sub(1, std::memory_order_acquire) > 0)
 						{
-							if (this->consumerCount-- > 1)		// There should be at least one consumer running.
+							if (this->consumerCount.fetch_sub(1, std::memory_order_relaxed) > 1)		// There should be at least one consumer running.
 							{
 								break;
 							}
 							else
 							{
-								this->consumerCount++;
+								this->consumerCount.fetch_add(1, std::memory_order_relaxed);
 							}
 						}
 						else
 						{
-							this->shutdownNConsumers++;
+							this->shutdownNConsumers.fetch_add(1, std::memory_order_relaxed);
 						}
                     }
                 }
@@ -442,7 +442,7 @@ std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(Turnin
     uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
     for (unsigned i = 0; i < workerCount; i++)
     {
-    	this->workersCount++;
+    	this->workersCount.fetch_add(std::memory_order_relaxed);
 
     	uint64_t nextIntervalEnd = (i < workerCount - 1) ? (nextIntervalBegin + intervalLength) : cracker.grilleCount;
     	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
@@ -466,9 +466,9 @@ std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(Turnin
                 		uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
                         cracker.registerOneAppliedGrill(grilleCountSoFar);
 
-                        (*processedGrillsCount)++;
+                        processedGrillsCount->fetch_add(1, std::memory_order_relaxed);
                 	}
-                    this->workersCount--;
+                    this->workersCount.fetch_sub(1, std::memory_order_relaxed);
                 }
             });
 

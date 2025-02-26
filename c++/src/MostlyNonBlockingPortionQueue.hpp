@@ -74,15 +74,15 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(const E& portion)
 template <class E>
 void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
 {
-    std::size_t newSize = ++this->size;
+    std::size_t newSize = this->size.fetch_add(1, std::memory_order_relaxed) + 1;
 
     while (true)
     {
-        if (this->size >= this->maxSize)
+        if (this->size.load(std::memory_order_relaxed) > this->maxSize)		// newSize is preincremented, hence > but not >=.
         {
             std::unique_lock lock(this->notFullMutex);
 
-            while (this->size >= this->maxSize)
+            while (this->size.load(std::memory_order_relaxed) > this->maxSize)
             {
                 this->notFullCondition.wait(lock);
             }
@@ -123,7 +123,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
         }
     }
 
-    std::size_t newSize = --this->size;
+    std::size_t newSize = this->size.fetch_sub(1, std::memory_order_relaxed) - 1;
     if (newSize == this->maxSize * 3 / 4)
     {
         std::lock_guard lock(this->notFullMutex);
@@ -148,7 +148,7 @@ void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
 
     {
         std::unique_lock lock(this->emptyMutex);
-        while (this->size > 0)
+        while (this->size.load(std::memory_order_relaxed) > 0)
         {
             this->emptyCondition.wait(lock);
         }

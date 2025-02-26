@@ -36,7 +36,7 @@ But the portion queue must be blocking only on hitting its bounds. Most of the t
 
 `org::voidland::concurrent::queue::MPMC_PortionQueue` is an interface for a portion queue that can be used in a multiple producer - multiple consumer scenario.  
 `org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue` is an implementation of a portion queue that wraps a non-blocking queue. It blocks only when necesssary, i.e. most of the time it has the throughput of the internal non-blocking queue.  
-`org::voidland::concurrent::queue::TextbookPortionQueue` is a blocking implementation of a portion queue. It blocks on a single mutex and uses two conditions for signaling between the consumers and the producers.
+`org::voidland::concurrent::queue::TextbookPortionQueue` is a blocking implementation of a portion queue. It blocks on a single mutex and uses two conditions for signaling between the consumers and the producers. The mutex works under heavy contention.
 
 
 ### Notes on the solution of the actual task
@@ -114,6 +114,7 @@ General results:
 - Rust is not as performant as C++.
 - Non-blocking queues perform much better than blocking ones.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
+- The more the CPUs, the less viable is a blocking algorithm, especially with Rust or Java.
 
 Conclusions:
 - If you want an algorithm to take any advantage of new CPUs it must be parallelized.

@@ -41,11 +41,11 @@ public class MostlyNonBlockingPortionQueue<E>
             
             while (true)
             {
-                if (this.size.get() >= this.maxSize)
+                if (this.size.get() > this.maxSize)		// newSize is preincremented, hence > but not >=.
                 {
                     synchronized (this.notFullCondition)
                     {
-                        while (this.size.get() >= this.maxSize)
+                        while (this.size.get() > this.maxSize)
                         {
                             this.notFullCondition.wait();
                         }

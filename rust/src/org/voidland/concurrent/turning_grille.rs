@@ -188,7 +188,7 @@ impl TurningGrilleCracker
         }
         self.findWordsAndReport(&candidateRevBuf);
         
-        self.grilleCountSoFar.fetch_add(1, Ordering::SeqCst) + 1
+        self.grilleCountSoFar.fetch_add(1, Ordering::Release) + 1
     }
 
     fn registerOneAppliedGrill(self: &Arc<Self>, grilleCountSoFar:u64)
@@ -319,10 +319,10 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
         }
         
         self.portionQueue.ensureAllPortionsAreRetrieved();
-        while cracker.grilleCountSoFar.load(Ordering::SeqCst) < cracker.grilleCount // Ensures all work is done and no more consumers will be started or stopped.
+        while cracker.grilleCountSoFar.load(Ordering::Acquire) < cracker.grilleCount // Ensures all work is done and no more consumers will be started or stopped.
         {
         }
-        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::SeqCst) as usize);
+        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::Relaxed) as usize);
 
         loop
         {
@@ -381,7 +381,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
                 milestoneState.bestConsumerCount = self.consumerCount.load(Ordering::Relaxed) as usize;
             }
             
-            if cracker.grilleCountSoFar.load(Ordering::SeqCst) < cracker.grilleCount
+            if grilleCountSoFar < cracker.grilleCount
             {
                 if grillesPerSecond < milestoneState.prevGrillesPerSecond
                 {
@@ -406,7 +406,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
                     }
                     else
                     {
-                        self.shutdownNConsumers.fetch_add(1, Ordering::SeqCst);
+                        self.shutdownNConsumers.fetch_add(1, Ordering::Release);
                     }
                 }
     
@@ -489,7 +489,7 @@ impl TurningGrilleCrackerProducerConsumer
     
     fn startConsumerThread(self: &Arc<Self>, cracker: &Arc<TurningGrilleCracker>) -> JoinHandle<()>
     {
-        self.consumerCount.fetch_add(1, Ordering::SeqCst);
+        self.consumerCount.fetch_add(1, Ordering::Relaxed);
         
         let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = self.portionQueue.clone();
         let cracker: Arc<TurningGrilleCracker> = cracker.clone();
@@ -503,7 +503,7 @@ impl TurningGrilleCrackerProducerConsumer
                     {
                         None =>
                         {
-                            self_.consumerCount.fetch_sub(1, Ordering::SeqCst);
+                            self_.consumerCount.fetch_sub(1, Ordering::Relaxed);
                             break;    
                         }
                         Some(grille) =>
@@ -513,22 +513,22 @@ impl TurningGrilleCrackerProducerConsumer
                     };
                     cracker.registerOneAppliedGrill(grilleCountSoFar);
                     
-                    if self_.shutdownNConsumers.load(Ordering::SeqCst) > 0
+                    if self_.shutdownNConsumers.load(Ordering::Relaxed) > 0
                     {
-                        if self_.shutdownNConsumers.fetch_sub(1, Ordering::SeqCst) > 0
+                        if self_.shutdownNConsumers.fetch_sub(1, Ordering::Acquire) > 0
                         {
-                            if self_.consumerCount.fetch_sub(1, Ordering::SeqCst) > 1   // There should be at least one consumer running.
+                            if self_.consumerCount.fetch_sub(1, Ordering::Relaxed) > 1   // There should be at least one consumer running.
                             {
                                 break;
                             }
                             else
                             {
-                                self_.consumerCount.fetch_add(1, Ordering::SeqCst);
+                                self_.consumerCount.fetch_add(1, Ordering::Relaxed);
                             }
                         }
                         else
                         {
-                            self_.shutdownNConsumers.fetch_add(1, Ordering::SeqCst);
+                            self_.shutdownNConsumers.fetch_add(1, Ordering::Relaxed);
                         }
                     }
                 }
@@ -650,7 +650,7 @@ impl TurningGrilleCrackerSyncless
         let intervalLength: u64 = (cracker.grilleCount as f64 / workerCount as f64).round() as u64;
         for i in 0..workerCount
         {
-            self.workersCount.fetch_add(1, Ordering::SeqCst);
+            self.workersCount.fetch_add(1, Ordering::Relaxed);
             
             let nextIntervalEnd: u64 = if i < workerCount - 1 { nextIntervalBegin + intervalLength } else { cracker.grilleCount };
             let mut grilleInterval: GrilleInterval = GrilleInterval::new(cracker.sideLength / 2, nextIntervalBegin, nextIntervalEnd);
@@ -678,9 +678,9 @@ impl TurningGrilleCrackerSyncless
                         };
                         cracker.registerOneAppliedGrill(grilleCountSoFar);
                         
-                        processedGrillsCount.fetch_add(1, Ordering::SeqCst);
+                        processedGrillsCount.fetch_add(1, Ordering::Relaxed);
                     }
-                    self_.workersCount.fetch_sub(1, Ordering::SeqCst);
+                    self_.workersCount.fetch_sub(1, Ordering::Relaxed);
                 }));
                 
             nextIntervalBegin += intervalLength;

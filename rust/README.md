@@ -37,11 +37,12 @@ The resulting executable is `target/release/silo`.
 
 General results:
 - Rust is noticeably slower than C++.
-- The standard library mutex does not perform well under high contention.
+- Do not use Rust if you expect to have high contention for a specific mutex.
 
 Some remarks: 
 - The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done. As a result, the CPUs are not fully utilized for just a small amount of time and the average speed is not significantly affected.
-- Rust has its own mutex implementation that performs very badly under high contention. Up until version 1.61 (inclusive) Rust used the pthread mutex - it performs much better but seems to be gone for good. The parking_lot mutex is almost as good as the pthread one.
+- Rust has its own implementation of synchronization primitives (specifically, mutex and condition) that perform very badly under high contention. The underlying cause is that notifying a condition leads to a ["hurry up and wait"](https://en.cppreference.com/w/cpp/thread/condition_variable/notify_one) situation. Up until version 1.61 (inclusive) Rust used the pthreads library - it avoids "hurry up and wait" and performs very well under high contention but this implementation seems to be gone for good.
+- The parking_lot crate at first glance performs better under high contention but it has the tendency to occasionally throw its hands up. After such an event, the processing speed of `textbook_pl` goes below the one of `serial`. The underlying cause is unknown.
 
 ## TODO
 - Make both a blocking and an asynchronous implementation based on [std::sync::mpmc](https://doc.rust-lang.org/std/sync/mpmc/index.html), as soon as it gets released.
