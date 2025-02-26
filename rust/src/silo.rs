@@ -1,15 +1,19 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
+#![feature(mpmc_channel)]
+
 pub mod org;
 
 use org::voidland::concurrent::VERBOSE;
 use org::voidland::concurrent::queue::ConcurrentPortionQueue;
+use org::voidland::concurrent::queue::AsyncMpmcPortionQueue;
 use org::voidland::concurrent::queue::NonBlockingQueue;
 use org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
 use org::voidland::concurrent::queue::MPMC_PortionQueue;
 use org::voidland::concurrent::queue::StdTextbookPortionQueue;
 use org::voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
+use org::voidland::concurrent::queue::SyncMpmcPortionQueue;
 use org::voidland::concurrent::turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
 use org::voidland::concurrent::turning_grille::Grille;
 use org::voidland::concurrent::turning_grille::TurningGrilleCracker;
@@ -95,6 +99,16 @@ fn main()
                 Arc::new(MostlyNonBlockingPortionQueue::new(initialConsumerCount, producerCount, nonBlockingQueue));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
+        "async_mpmc" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount:usize = cpuCount;
+
+            let nonBlockingQueue: Box<dyn NonBlockingQueue<Grille>> = Box::new(AsyncMpmcPortionQueue::<Grille>::new());
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
+                Arc::new(MostlyNonBlockingPortionQueue::new(initialConsumerCount, producerCount, nonBlockingQueue));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
         "textbook" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
@@ -111,6 +125,15 @@ fn main()
 
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
                 Arc::new(ParkingLotTextbookPortionQueue::new(initialConsumerCount, producerCount));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
+        "sync_mpmc" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount:usize = cpuCount;
+
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
+                Arc::new(SyncMpmcPortionQueue::new(initialConsumerCount, producerCount));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "syncless" =>

@@ -4,9 +4,12 @@ mod blocking_portion_queue;
 
 pub use non_blocking_queue::NonBlockingQueue;
 pub use non_blocking_queue::ConcurrentPortionQueue;
+pub use non_blocking_queue::AsyncMpmcPortionQueue;
 pub use mostly_non_blocking_portion_queue::MostlyNonBlockingPortionQueue;
 pub use blocking_portion_queue::StdTextbookPortionQueue;
 pub use blocking_portion_queue::ParkingLotTextbookPortionQueue;
+pub use blocking_portion_queue::SyncMpmcPortionQueue;
+
 
 
 pub trait MPMC_PortionQueue<E> : Send + Sync

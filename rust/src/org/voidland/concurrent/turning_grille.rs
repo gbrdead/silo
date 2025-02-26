@@ -22,12 +22,12 @@ use std::thread::available_parallelism;
 use std::time::Instant;
 use std::time::Duration;
 use std::string::String;
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 use regex::Regex;
 use concurrent_queue::ConcurrentQueue;
 
 
-pub static NOT_CAPITAL_ENGLISH_LETTERS_RE: Lazy<Regex> = Lazy::new(||
+pub static NOT_CAPITAL_ENGLISH_LETTERS_RE: LazyLock<Regex> = LazyLock::new(||
     {
         Regex::new(r"[^A-Z]").unwrap()
     });
