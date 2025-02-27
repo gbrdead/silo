@@ -96,7 +96,7 @@ impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
     
     fn tryDequeue(&self) -> Option<E>
     {
-        match self.receiver.recv()
+        match self.receiver.try_recv()
         {
             Ok(portion) => Some(portion),
             Err(_) => None
