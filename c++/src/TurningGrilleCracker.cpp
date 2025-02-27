@@ -88,7 +88,7 @@ std::set<std::string> TurningGrilleCracker::bruteForce()
     }
     std::cerr << std::endl;
 
-    if (this->grilleCountSoFar.load(std::memory_order_relaxed) != this->grilleCount)
+    if (this->grilleCountSoFar.load(std::memory_order_acquire) != this->grilleCount)
     {
         throw std::runtime_error("Some grilles got lost.");
     }
@@ -211,7 +211,7 @@ void TurningGrilleCrackerProducerConsumer::bruteForce(TurningGrilleCracker& crac
 
     this->portionQueue->ensureAllPortionsAreRetrieved();
     while (cracker.grilleCountSoFar.load(std::memory_order_acquire) < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
-    this->portionQueue->stopConsumers(this->consumerCount.load(std::memory_order_relaxed));
+    this->portionQueue->stopConsumers(this->consumerCount.load(std::memory_order_acquire));
 
     std::thread consumerThread;
     while (this->consumerThreads.try_dequeue(consumerThread))
@@ -335,7 +335,7 @@ void TurningGrilleCrackerProducerConsumer::startInitialConsumerThreads(TurningGr
 
 std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGrilleCracker& cracker)
 {
-    this->consumerCount.fetch_add(1, std::memory_order_relaxed);
+    this->consumerCount.fetch_add(1, std::memory_order_release);
 
     return std::thread
         {
@@ -346,7 +346,7 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
                 	std::optional<Grille> grille = this->portionQueue->retrievePortion();
                 	if (!grille.has_value())
                 	{
-                		this->consumerCount.fetch_sub(1, std::memory_order_relaxed);
+                		this->consumerCount.fetch_sub(1, std::memory_order_release);
                 		break;
                 	}
                 	uint64_t grilleCountSoFar = cracker.applyGrille(*grille);
@@ -354,15 +354,15 @@ std::thread TurningGrilleCrackerProducerConsumer::startConsumerThread(TurningGri
 
                     if (this->shutdownNConsumers.load(std::memory_order_relaxed) > 0)
                     {
-						if (this->shutdownNConsumers.fetch_sub(1, std::memory_order_acquire) > 0)
+						if (this->shutdownNConsumers.fetch_sub(1, std::memory_order_acq_rel) > 0)
 						{
-							if (this->consumerCount.fetch_sub(1, std::memory_order_relaxed) > 1)		// There should be at least one consumer running.
+							if (this->consumerCount.fetch_sub(1, std::memory_order_acq_rel) > 1)		// There should be at least one consumer running.
 							{
 								break;
 							}
 							else
 							{
-								this->consumerCount.fetch_add(1, std::memory_order_relaxed);
+								this->consumerCount.fetch_add(1, std::memory_order_release);
 							}
 						}
 						else

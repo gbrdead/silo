@@ -152,7 +152,7 @@ impl TurningGrilleCracker
         }
         eprintln!();
         
-        if self.grilleCountSoFar.load(Ordering::Relaxed) != self.grilleCount
+        if self.grilleCountSoFar.load(Ordering::Acquire) != self.grilleCount
         {
             panic!("Some grilles got lost.");
         }
@@ -322,7 +322,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
         while cracker.grilleCountSoFar.load(Ordering::Acquire) < cracker.grilleCount // Ensures all work is done and no more consumers will be started or stopped.
         {
         }
-        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::Relaxed) as usize);
+        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::Acquire) as usize);
 
         loop
         {
@@ -489,7 +489,7 @@ impl TurningGrilleCrackerProducerConsumer
     
     fn startConsumerThread(self: &Arc<Self>, cracker: &Arc<TurningGrilleCracker>) -> JoinHandle<()>
     {
-        self.consumerCount.fetch_add(1, Ordering::Relaxed);
+        self.consumerCount.fetch_add(1, Ordering::Release);
         
         let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = self.portionQueue.clone();
         let cracker: Arc<TurningGrilleCracker> = cracker.clone();
@@ -503,7 +503,7 @@ impl TurningGrilleCrackerProducerConsumer
                     {
                         None =>
                         {
-                            self_.consumerCount.fetch_sub(1, Ordering::Relaxed);
+                            self_.consumerCount.fetch_sub(1, Ordering::Release);
                             break;    
                         }
                         Some(grille) =>
@@ -515,15 +515,15 @@ impl TurningGrilleCrackerProducerConsumer
                     
                     if self_.shutdownNConsumers.load(Ordering::Relaxed) > 0
                     {
-                        if self_.shutdownNConsumers.fetch_sub(1, Ordering::Acquire) > 0
+                        if self_.shutdownNConsumers.fetch_sub(1, Ordering::AcqRel) > 0
                         {
-                            if self_.consumerCount.fetch_sub(1, Ordering::Relaxed) > 1   // There should be at least one consumer running.
+                            if self_.consumerCount.fetch_sub(1, Ordering::AcqRel) > 1   // There should be at least one consumer running.
                             {
                                 break;
                             }
                             else
                             {
-                                self_.consumerCount.fetch_add(1, Ordering::Relaxed);
+                                self_.consumerCount.fetch_add(1, Ordering::Release);
                             }
                         }
                         else

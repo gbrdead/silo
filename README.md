@@ -41,7 +41,7 @@ But the portion queue must be blocking only on hitting its bounds. Most of the t
 
 ### Notes on the solution of the actual task
 
-Let N be the hardware parallelism (number of CPUs * number of threads per CPU).
+Let N be the hardware parallelism (number of CPUs * number of hardware threads per CPU).
 
 `MostlyNonBlockingPortionQueue` still occasionally blocks. N producers and N consumers do not utilize all of the available CPU time.
 

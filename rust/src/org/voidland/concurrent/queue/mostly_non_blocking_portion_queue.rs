@@ -47,14 +47,14 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
 {
     fn addPortion(&self, mut portion: E)
     {
-        let newSize: usize = self.size.fetch_add(1, Ordering::Relaxed) + 1;
+        let newSize: usize = self.size.fetch_add(1, Ordering::AcqRel) + 1;
         
         loop
         {
-            if self.size.load(Ordering::Relaxed) > self.maxSize     // newSize is preincremented, hence > but not >=.
+            if self.size.load(Ordering::Acquire) > self.maxSize     // newSize is preincremented, hence > but not >=.
             {
                 let mut lock = self.notFullMutex.lock().unwrap();
-                while self.size.load(Ordering::Relaxed) > self.maxSize
+                while self.size.load(Ordering::Acquire) > self.maxSize
                 {
                     lock = self.notFullCondition.wait(lock).unwrap();
                 }
@@ -96,7 +96,7 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
             }
         }
         
-        let newSize: usize = self.size.fetch_sub(1, Ordering::Relaxed) - 1;
+        let newSize: usize = self.size.fetch_sub(1, Ordering::AcqRel) - 1;
         if newSize == self.maxSize * 3 / 4
         {
             let _lock = self.notFullMutex.lock().unwrap();
@@ -120,7 +120,7 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
 
         {
             let mut lock = self.emptyMutex.lock().unwrap();
-            while self.size.load(Ordering::Relaxed) > 0
+            while self.size.load(Ordering::Acquire) > 0
             {
                 lock = self.emptyCondition.wait(lock).unwrap();
             }

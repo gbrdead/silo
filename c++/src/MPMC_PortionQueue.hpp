@@ -22,7 +22,7 @@ public:
     // The following two methods must be called in succession after the producer threads are done adding portions.
     // After that, the queue cannot be reused.
     virtual void ensureAllPortionsAreRetrieved() = 0;
-    virtual void stopConsumers(std::size_t consumerCount) = 0;
+    virtual void stopConsumers(std::size_t finalConsumerCount) = 0;
 
     virtual std::size_t getSize() = 0;
     virtual std::size_t getMaxSize() = 0;

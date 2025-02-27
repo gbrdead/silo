@@ -38,7 +38,7 @@ public:
     void addPortion(E&& portion);
     std::optional<E> retrievePortion();
     void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t consumerCount);
+    void stopConsumers(std::size_t finalConsumerCount);
     std::size_t getSize();
     std::size_t getMaxSize();
 };
@@ -112,7 +112,7 @@ void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
 }
 
 template <class E>
-void TextbookPortionQueue<E>::stopConsumers(std::size_t consumerCount)
+void TextbookPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
     std::unique_lock lock(this->mutex);
 
@@ -152,7 +152,7 @@ public:
     void addPortion(E&& portion);
     std::optional<E> retrievePortion();
     void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t consumerCount);
+    void stopConsumers(std::size_t finalConsumerCount);
     std::size_t getSize();
     std::size_t getMaxSize();
 };
@@ -196,9 +196,9 @@ void OneTBB_BoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
 }
 
 template <class E>
-void OneTBB_BoundedPortionQueue<E>::stopConsumers(std::size_t consumerCount)
+void OneTBB_BoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
-    for (std::size_t i = 0; i < consumerCount; i++)
+    for (std::size_t i = 0; i < finalConsumerCount; i++)
     {
         this->queue.push(std::nullopt);
     }
@@ -233,7 +233,7 @@ public:
     void addPortion(E&& portion);
     std::optional<E> retrievePortion();
     void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t consumerCount);
+    void stopConsumers(std::size_t finalConsumerCount);
     std::size_t getSize();
     std::size_t getMaxSize();
 };
@@ -276,9 +276,9 @@ void SyncBoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
 }
 
 template <class E>
-void SyncBoundedPortionQueue<E>::stopConsumers(std::size_t consumerCount)
+void SyncBoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
-    for (std::size_t i = 0; i < consumerCount; i++)
+    for (std::size_t i = 0; i < finalConsumerCount; i++)
     {
         this->queue.push_back(std::nullopt);
     }
