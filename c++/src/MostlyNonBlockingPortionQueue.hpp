@@ -35,6 +35,9 @@ private:
     std::condition_variable notEmptyCondition;
     std::condition_variable emptyCondition;
 
+    std::atomic<bool> aProducerIsWaiting;
+    std::atomic<bool> aConsumerIsWaiting;
+
 public:
     MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue);
 
@@ -59,7 +62,9 @@ MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t init
     emptyMutex(),
     notFullCondition(),
     notEmptyCondition(),
-    emptyCondition()
+    emptyCondition(),
+	aProducerIsWaiting(false),
+	aConsumerIsWaiting(false)
 {
 	this->nonBlockingQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
 }
@@ -74,16 +79,15 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(const E& portion)
 template <class E>
 void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
 {
-    std::size_t newSize = this->size.fetch_add(1, std::memory_order_acq_rel) + 1;
-
     while (true)
     {
-        if (this->size.load(std::memory_order_acquire) > this->maxSize)		// newSize is preincremented, hence > but not >=.
+        if (this->size.load(std::memory_order_acquire) >= this->maxSize)
         {
             std::unique_lock lock(this->notFullMutex);
 
-            while (this->size.load(std::memory_order_acquire) > this->maxSize)
+            while (this->size.load(std::memory_order_acquire) >= this->maxSize)
             {
+            	this->aProducerIsWaiting.store(true, std::memory_order_release);
                 this->notFullCondition.wait(lock);
             }
         }
@@ -93,8 +97,10 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
         	break;
         }
     }
+    this->size.fetch_add(1, std::memory_order_release);
 
-    if (newSize == this->maxSize * 1 / 4)
+    bool expected = true;
+    if (this->aConsumerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
     {
         std::lock_guard lock(this->notEmptyMutex);
         this->notEmptyCondition.notify_all();
@@ -115,20 +121,25 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
             {
                 return std::nullopt;
             }
+
         	if (this->nonBlockingQueue->tryDequeue(portion))
         	{
         		break;
         	}
+
+        	this->aConsumerIsWaiting.store(true, std::memory_order_release);
         	this->notEmptyCondition.wait(lock);
         }
     }
-
     std::size_t newSize = this->size.fetch_sub(1, std::memory_order_acq_rel) - 1;
-    if (newSize == this->maxSize * 3 / 4)
+
+    bool expected = true;
+    if (this->aProducerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
     {
         std::lock_guard lock(this->notFullMutex);
         this->notFullCondition.notify_all();
     }
+
     if (newSize == 0)
     {
         std::lock_guard lock(this->emptyMutex);

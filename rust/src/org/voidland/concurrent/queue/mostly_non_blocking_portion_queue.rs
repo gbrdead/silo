@@ -2,6 +2,7 @@ use super::MPMC_PortionQueue;
 use super::NonBlockingQueue;
 
 use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::sync::Condvar;
@@ -19,7 +20,10 @@ pub struct MostlyNonBlockingPortionQueue<E>
     emptyMutex: Mutex<bool>,
     notFullCondition: Condvar,
     notEmptyCondition: Condvar,
-    emptyCondition: Condvar
+    emptyCondition: Condvar,
+    
+    aProducerIsWaiting: AtomicBool,
+    aConsumerIsWaiting: AtomicBool
 }
 
 impl<E> MostlyNonBlockingPortionQueue<E>
@@ -36,7 +40,9 @@ impl<E> MostlyNonBlockingPortionQueue<E>
             emptyMutex: Mutex::new(false),
             notFullCondition: Condvar::new(),
             notEmptyCondition: Condvar::new(),
-            emptyCondition: Condvar::new()
+            emptyCondition: Condvar::new(),
+            aProducerIsWaiting: AtomicBool::new(false),
+            aConsumerIsWaiting: AtomicBool::new(false)
         };
         ret.nonBlockingQueue.setSizeParameters(producerCount, ret.maxSize);
         ret
@@ -47,15 +53,14 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
 {
     fn addPortion(&self, mut portion: E)
     {
-        let newSize: usize = self.size.fetch_add(1, Ordering::AcqRel) + 1;
-        
         loop
         {
-            if self.size.load(Ordering::Acquire) > self.maxSize     // newSize is preincremented, hence > but not >=.
+            if self.size.load(Ordering::Acquire) >= self.maxSize
             {
                 let mut lock = self.notFullMutex.lock().unwrap();
-                while self.size.load(Ordering::Acquire) > self.maxSize
+                while self.size.load(Ordering::Acquire) >= self.maxSize
                 {
+                    self.aProducerIsWaiting.store(true, Ordering::Release);
                     lock = self.notFullCondition.wait(lock).unwrap();
                 }
             }
@@ -66,8 +71,9 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
                 Err(error) => portion = error
             }
         }
+        self.size.fetch_add(1, Ordering::Release);
         
-        if newSize == self.maxSize * 1 / 4
+        if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
         {
             let _lock = self.notEmptyMutex.lock().unwrap();
             self.notEmptyCondition.notify_all();
@@ -87,21 +93,26 @@ impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
                 {
                     return None;
                 }
+                
                 portion = self.nonBlockingQueue.tryDequeue();
                 if portion.is_some()
                 {
                     break;
                 }
+                
+                self.aConsumerIsWaiting.store(true, Ordering::Release);
                 workDone = self.notEmptyCondition.wait(workDone).unwrap();
             }
         }
         
         let newSize: usize = self.size.fetch_sub(1, Ordering::AcqRel) - 1;
-        if newSize == self.maxSize * 3 / 4
+        
+        if self.aProducerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
         {
             let _lock = self.notFullMutex.lock().unwrap();
             self.notFullCondition.notify_all();
         }
+        
         if newSize == 0
         {
             let _lock = self.emptyMutex.lock().unwrap();

@@ -1,6 +1,7 @@
 package org.voidland.concurrent.queue;
 
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -17,6 +18,9 @@ public class MostlyNonBlockingPortionQueue<E>
     private Object notEmptyCondition;
     private Object emptyCondition;
     
+    private AtomicBoolean aProducerIsWaiting;
+    private AtomicBoolean aConsumerIsWaiting;
+    
     
     public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> nonBlockingQueue)
     {
@@ -29,6 +33,9 @@ public class MostlyNonBlockingPortionQueue<E>
         this.notEmptyCondition = new Object();
         this.emptyCondition = new Object();
 
+        this.aProducerIsWaiting = new AtomicBoolean(false);
+        this.aConsumerIsWaiting = new AtomicBoolean(false);
+
         this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
     
@@ -37,16 +44,15 @@ public class MostlyNonBlockingPortionQueue<E>
     {
         try
         {
-            int newSize = this.size.incrementAndGet();
-            
             while (true)
             {
-                if (this.size.get() > this.maxSize)		// newSize is preincremented, hence > but not >=.
+                if (this.size.get() >= this.maxSize)
                 {
                     synchronized (this.notFullCondition)
                     {
-                        while (this.size.get() > this.maxSize)
+                        while (this.size.get() >= this.maxSize)
                         {
+                        	this.aProducerIsWaiting.set(true);
                             this.notFullCondition.wait();
                         }
                     }
@@ -57,8 +63,9 @@ public class MostlyNonBlockingPortionQueue<E>
                 	break;
                 }
             }
+            this.size.getAndIncrement();
     
-            if (newSize == this.maxSize * 1 / 4)
+            if (this.aConsumerIsWaiting.compareAndSet(true, false))
             {
                 synchronized (this.notEmptyCondition)
                 {
@@ -89,24 +96,29 @@ public class MostlyNonBlockingPortionQueue<E>
                         {
                             return null;
                         }
+                        
                         portion = this.nonBlockingQueue.tryDequeue();
                         if (portion != null)
                         {
                         	break;
                         }
+                        
+                        this.aConsumerIsWaiting.set(true);
                         this.notEmptyCondition.wait();
                 	}
                 }
             }
             
             int newSize = this.size.decrementAndGet();
-            if (newSize == this.maxSize * 3 / 4)
+            
+            if (this.aProducerIsWaiting.compareAndSet(true, false))
             {
                 synchronized (this.notFullCondition)
                 {
                     this.notFullCondition.notifyAll();
                 }
             }
+            
             if (newSize == 0)
             {
                 synchronized (this.emptyCondition)
