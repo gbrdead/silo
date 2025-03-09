@@ -7,7 +7,7 @@ This project compares the multi-threading performance of the following runtimes:
 - [Java/JVM](java/README.md)
 
 The test results and conclusions are at the bottom.  
-***Note: the measurements are still in progress.***
+***Note: the measurements are still in progress. The presented results are not final.***
 
 
 ### Description of the performance test
@@ -61,6 +61,15 @@ Running a reference test with the environment variable `VERBOSE` set to `true` w
 - The `textbook` and `syncless` implementations in the different languages are 100% equivalent and can be used for inter-runtime comparisons.
 - The best mostly non-blocking implementations can also be used for inter-runtime comparisons.
 
+### Unstable measurements
+
+Some of the implementations for a given language/runtime do not yield stable measurements, i.e. the results vary too much. The possible reasons are:
+- A synchronization primitive (mutex) abruptly lowering its performance at arbitrary moments.
+- Unfair scheduler (for the `syncless` implementation). With such a scheduler the more privileged threads finish too early and the CPUs are not fully utilized for a random amount of time.
+- Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, even when deemed stable, Java's measurements are noticeably less stable than C++' and Rust's ones.
+
+Implementations with inherently unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
+
 ### Test results
 
 Test hardware
@@ -79,45 +88,46 @@ Intel Core i5-4210M
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** |  |  |  |
-| **Rust/native** |  |  |  |
+| **C++/native** | 863 | 741 | 684 |
+| **Rust/native** | 719 | 639 | ~~334~~ |
 | **Java/JVM** |  |  |  |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** |  |  |  |
-| **Rust/native** |  |  |  |
-| **Java/JVM** |  |  |  |
+| **C++/native** | 1680 | 1392 | 1081 |
+| **Rust/native** | 1195 | 1147 | ~~634~~ |
+| **Java/JVM** | ~~937~~ | 841 | 666 |
 
 AMD Ryzen 7735HS
 
 | runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** |  |  |  |
-| **Rust/native** |  |  |  |
-| **Java/JVM** |  |  |  |
+| **C++/native** | 4682 | 3551 | 1769 |
+| **Rust/native** | 3762 | 2939 | ~~725~~ |
+| **Java/JVM** | ~~2092~~ | 1621 | 886 |
 
-`serial` (single-threaded) per GHz
+`serial` (single-threaded)
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
-| Intel Core i5-4210M |  |  |  |
-| Intel Core i5-10210U |  |  |  |
-| AMD Ryzen 7735HS |  |  |  |
+| Intel Core i5-4210M | 393 | 338 |  |
+| Intel Core i5-10210U | 541 | 432 | 261 |
+| AMD Ryzen 7735HS | 854 | 664 | 542 |
 
 ---
 
 General results:
-- Statically-optimized native code is about 1.5-2 times faster than dynamically-optimized JIT-compiled code. In short: C++ and Rust are significantly faster than Java for general purpose calculations.
-- Rust is not as performant as C++.
+- C++ is about 25% more performant than Rust.
+- C++ is about 2 times more performant than Java.
 - Non-blocking queues perform much better than blocking ones.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
-- The more the CPUs, the less viable is a blocking algorithm, especially with Rust or Java.
+- The more the CPUs, the less viable is a blocking algorithm, especially with Rust and Java.
+- Single-core CPU improvements are still happenning, although not on a 1990-ies scale.
 
 Conclusions:
-- If you want an algorithm to take any advantage of new CPUs it must be parallelized.
+- If you want an algorithm to take advantage of new CPUs it better be parallelized.
 - Use non-blocking synchronization to scale better with higher hardware parallelism.
 - If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ instead of Java and even Rust.
 

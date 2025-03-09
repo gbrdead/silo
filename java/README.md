@@ -1,4 +1,4 @@
-# Silo Java multi-threading performace test
+# Silo Java multi-threading performance test
 
 ## Build
 
@@ -13,31 +13,39 @@ The resulting JAR is `target/silo-*.jar`.
 
 `silo.jar` must be run from the top directory of the silo project. There is only one command-line parameter, specifying the implementation type:
 
-| Implementation | Queue type | Non-blocking | Suffers from scheduler unfairness |
+| Implementation | Queue type | Non-blocking | Stable measurements |
 |---|---|---|---|
-| `concurrent` | [ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html) | mostly | no |
-| `textbook` | a simple blocking bounded queue using only Java SE (ArrayDeque, ReentrantLock and Condition) | no | no |
-| `blocking` | [ArrayBlockingQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ArrayBlockingQueue.html) | no | no |
-| `syncless` | queueless, with no synchronization overhead | yes | yes |
-| `serial` | single-threaded | N/A | N/A |
+| `concurrent` | [ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html) | mostly | yes |
+| `textbook` | a simple blocking bounded queue using only Java SE (ArrayDeque, ReentrantLock and Condition) | no | yes |
+| `blocking` | [ArrayBlockingQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ArrayBlockingQueue.html) | no | yes |
+| `syncless` | queueless, with no synchronization overhead | yes | no |
+| `serial` | single-threaded | N/A | yes |
 
 ## Test results
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| `concurrent` |  |  |  |
-| `textbook` |  |  |  |
-| `blocking` |  |  |  |
-| `syncless` |  |  |  |
-| `serial` |  |  |  |
+| `concurrent` |  | 841 | 1621 |
+| `textbook` |  | 666 | 886 |
+| `blocking` |  | 694 | 1233 |
+| `syncless` |  | ~~937~~ | ~~2092~~ |
+| `serial` |  | 261 | 542 |
+
+---  
+
+| Implementation / JVM  version | 8 | 11 | 17 | 21 |
+|---|---|---|---|---|
+| `concurrent` | 1902 | 1766 | 1673 | 1621 |
+| `textbook` | 866 | 909 | 797 | 886 |
+| `blocking` | 912 | 788 | 1044 | 1233 |
+| `syncless` | 2129 | 2216 | 1796 | 2092 |
+| `serial` | 544 | 510 | 519 | 542 |
 
 General results:
-- `concurrent` is the winner among the queues and scales with hardware parallelism even better than `syncless`.
+- `concurrent` is the winner among the queues.
+- There are no noticeable performance improvements in the JVM between version 8 and version 21.
 
 Some remarks: 
+- The Java measurements are in general less stable than with C++ or Rust, probably because of the non-deterministic nature of the JIT compiler and the garbage collector. Thus, the standard for deeming an implementation stable for Java is lower.
 - The thread scheduler is very unfair. Thus the `syncless` implementation is very far from perfect. The most privileged thread finishes its job at less than 90% of the total job done. As a result, the CPUs are not fully utilized for a big amount of time and the average speed is negatively affected.
 - The Java mutex performs very badly under high contention, similar to the standard mutex in Rust and unlike C++.
-
-## TODO
-- Measure the performance of older versions of the JVM to determine whether it has improved in the recent past. The tests so far have been performed with Java 21.
-- Investigate the lock contention.
