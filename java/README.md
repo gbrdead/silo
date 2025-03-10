@@ -47,5 +47,5 @@ General results:
 
 Some remarks: 
 - The Java measurements are in general less stable than with C++ or Rust, probably because of the non-deterministic nature of the JIT compiler and the garbage collector. Thus, the standard for deeming an implementation stable for Java is lower.
-- The thread scheduler is very unfair. Thus the `syncless` implementation is very far from perfect. The most privileged thread finishes its job at less than 90% of the total job done. As a result, the CPUs are not fully utilized for a big amount of time and the average speed is negatively affected.
+- The thread scheduler is very unfair. Thus the `syncless` implementation is very far from perfect. The most privileged thread finishes its job at less than 90% of the total job done.
 - The Java mutex performs very badly under high contention, similar to the standard mutex in Rust and unlike C++.

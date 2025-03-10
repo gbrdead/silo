@@ -63,10 +63,10 @@ General results:
 - `concurrent` and `atomic` have almost the same performance and can be considered as co-winners among the queues.
 
 Some remarks: 
-- The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done. As a result, the CPUs are not fully utilized for just a small amount of time and the average speed is not significantly affected.
+- The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done.
 - At first glance, `oneapi::tbb::concurrent_bounded_queue` should work like `org::voidland::concurrent::MostlyNonBlockingPortionQueue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low for this to be true.
-- The average speed of the oneTBB queues is unexplainably low. Also, their performance is erratic - the speed varies wildly.
-- `boost::sync_bounded_queue` is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock.
+- The average speed of the oneTBB queues is inexplicably low. Also, their performance is erratic - the speed varies wildly.
+- `boost::sync_bounded_queue` is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock. Also, its performance is erratic - the speed varies wildly.
 
 ## TODO
 - Measure the performance with Clang. The tests so far have been performed with GCC.

@@ -47,7 +47,7 @@ Let N be the hardware parallelism (number of CPUs * number of hardware threads p
 
 `org::voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer` implements the producer-consumer pattern using a fixed number of producers and an adaptive number of consumers. If some part of the CPUs idle occasionally then the number of the consumers will be increased. If the contention of the threads becomes too high, their number will be decreased. `TurningGrilleCrackerProducerConsumer` is used for both the blocking and the mostly non-blocking portion queues.
 
-`org::voidland::concurrent::TurningGrilleCrackerSyncless` solves the same task without employing the producer-consumer pattern and without needing any synchronization. It divides the portions to N equal packages, each applied by a separate thread (acting as both producer and a consumer). If the thread scheduler is perfectly fair then this solution will be perfect. If the thread scheduler is fairly unfair then the more privileged threads will be done earlier and leave some of the CPUs unused while the less privileged threads finish their jobs.  
+`org::voidland::concurrent::TurningGrilleCrackerSyncless` solves the same task without employing the producer-consumer pattern and without needing any synchronization. It divides the portions to N equal packages, each applied by a separate thread (acting as both a producer and a consumer). If the thread scheduler is perfectly fair then this solution will be perfect. If the thread scheduler is fairly unfair then the more privileged threads will be done earlier and leave some of the CPUs unused until the less privileged threads finish their jobs.  
 Notice that the syncless implementation is synchronization-free only as far as software goes. The CPUs still synchronize their access to RAM and the higher level (common) caches. The hardware threads within a CPU are even more contentious with each other.
 
 ### Notes on the measurements
@@ -60,12 +60,13 @@ Running a reference test with the environment variable `VERBOSE` set to `true` w
 
 - The `textbook` and `syncless` implementations in the different languages are 100% equivalent and can be used for inter-runtime comparisons.
 - The best mostly non-blocking implementations can also be used for inter-runtime comparisons.
+- The `serial` implementations can be used for single-threaded comparisons.
 
 ### Unstable measurements
 
 Some of the implementations for a given language/runtime do not yield stable measurements, i.e. the results vary too much. The possible reasons are:
-- A synchronization primitive (mutex) abruptly lowering its performance at arbitrary moments.
-- Unfair scheduler (for the `syncless` implementation). With such a scheduler the more privileged threads finish too early and the CPUs are not fully utilized for a random amount of time.
+- A synchronization primitive (mutex) abruptly lowering its throughput at arbitrary moments.
+- Unfair scheduler for the `syncless` implementation - with such a scheduler the more privileged threads finish too early and then the CPUs are not fully utilized for a random amount of time until the less privileged threads finish their work.
 - Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, even when deemed stable, Java's measurements are noticeably less stable than C++' and Rust's ones.
 
 Implementations with inherently unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
