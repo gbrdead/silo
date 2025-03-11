@@ -28,24 +28,23 @@ The resulting JAR is `target/silo-*.jar`.
 | `concurrent` |  | 841 | 1621 |
 | `textbook` |  | 666 | 886 |
 | `blocking` |  | 694 | 1233 |
-| `syncless` |  | ~~937~~ | ~~2092~~ |
-| `serial` |  | 261 | 542 |
+| `syncless` | 433 | 937 | 2092 |
+| `serial` | 240 | 261 | 542 |
 
 ---  
 
 | Implementation / JVM  version | 8 | 11 | 17 | 21 |
 |---|---|---|---|---|
-| `concurrent` | 1902 | 1766 | 1673 | 1621 |
-| `textbook` | 866 | 909 | 797 | 886 |
-| `blocking` | 912 | 788 | 1044 | 1233 |
-| `syncless` | 2129 | 2216 | 1796 | 2092 |
-| `serial` | 544 | 510 | 519 | 542 |
+| `concurrent` | 1902 | 1925 | 1673 | 1621 |
+| `textbook` | 960 | 843 | 797 | 886 |
+| `blocking` | 912 | 977 | 1020 | 1233 |
+| `syncless` | 2319 | 2062 | 1796 | 2092 |
+| `serial` | 547 | 515 | 519 | 542 |
 
 General results:
 - `concurrent` is the winner among the queues.
 - There are no noticeable performance improvements in the JVM between version 8 and version 21.
 
 Some remarks: 
-- The Java measurements are in general less stable than with C++ or Rust, probably because of the non-deterministic nature of the JIT compiler and the garbage collector. Thus, the standard for deeming an implementation stable for Java is lower.
 - The thread scheduler is very unfair. Thus the `syncless` implementation is very far from perfect. The most privileged thread finishes its job at less than 90% of the total job done.
 - The Java mutex performs very badly under high contention, similar to the standard mutex in Rust and unlike C++.

@@ -49,13 +49,13 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| concurrent | 730 | 1382 | 3447 |
-| atomic | 741 | 1392 | 3551 |
-| lockfree | 715 | 1322 | 2833 |
-| textbook | 684 | 1081 | 1769 |
-| syncless | 863 | 1680 | 4682 |
-| serial | 393 | 541 | 854 |
-| onetbb | ~~444~~ | ~~665~~ | ~~936~~ |
+| concurrent | 730 | 1374 | 3447 |
+| atomic | 741 | 1401 | 3551 |
+| lockfree | 715 | 1317 | 2833 |
+| textbook | 684 | 1108 | 1769 |
+| syncless | 863 | 1663 | 4682 |
+| serial | 393 | 506 | 854 |
+| onetbb | ~~444~~ | ~~670~~ | ~~936~~ |
 | onetbb_bounded | ~~331~~ | ~~702~~ | ~~741~~ |
 | sync_bounded |  | ~~203~~ | ~~1433~~ |
 
