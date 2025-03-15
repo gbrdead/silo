@@ -66,7 +66,7 @@ MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t init
 	aProducerIsWaiting(false),
 	aConsumerIsWaiting(false)
 {
-	this->nonBlockingQueue->setSizeParameters(producerCount, this->maxSize + producerCount);
+	this->nonBlockingQueue->setMaxSize(this->maxSize);
 }
 
 template <class E>

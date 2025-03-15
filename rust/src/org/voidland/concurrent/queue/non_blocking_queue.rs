@@ -1,15 +1,19 @@
-use concurrent_queue::ConcurrentQueue;
 use core::option::Option;
 use std::result::Result;
+use concurrent_queue::ConcurrentQueue;
+use concurrent_queue::PushError;
+use concurrent_queue::PopError;
 use std::sync::mpmc::channel;
 use std::sync::mpmc::Sender;
 use std::sync::mpmc::Receiver;
+use std::sync::mpsc::TrySendError;
+use std::sync::mpsc::TryRecvError;
 
 
 
 pub trait NonBlockingQueue<E> : Send + Sync
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, _maxSize: usize)
+    fn setMaxSize(&mut self, _maxSize: usize)
     {
     }
 
@@ -37,7 +41,7 @@ impl<E> ConcurrentPortionQueue<E>
 
 impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, maxSize: usize)
+    fn setMaxSize(&mut self, maxSize: usize)
     {
         self.queue = Some(ConcurrentQueue::<E>::bounded(maxSize));
     }
@@ -47,7 +51,8 @@ impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
         match self.queue.as_ref().unwrap().push(portion)
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(error.into_inner())
+            Err(PushError::Full(portion)) => Err(portion),
+            Err(PushError::Closed(_)) => panic!()
         }
     }
     
@@ -56,7 +61,8 @@ impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
         match self.queue.as_ref().unwrap().pop()
         {
             Ok(portion) => Some(portion),
-            Err(_) => None
+            Err(PopError::Empty) => None,
+            Err(PopError::Closed) => panic!()
         }
     }
 }
@@ -84,14 +90,14 @@ impl<E> AsyncMpmcPortionQueue<E>
 
 impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, _maxSize: usize)
-    {
-    }
-
     fn tryEnqueue(&self, portion: E) -> Result<(), E>
     {
-        let _ = self.sender.send(portion);
-        Ok(())
+        match self.sender.try_send(portion)
+        {
+            Ok(_) => Ok(()),
+            Err(TrySendError::Full(portion)) => Err(portion),
+            Err(TrySendError::Disconnected(_)) => panic!()
+        }
     }
     
     fn tryDequeue(&self) -> Option<E>
@@ -99,7 +105,8 @@ impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
         match self.receiver.try_recv()
         {
             Ok(portion) => Some(portion),
-            Err(_) => None
+            Err(TryRecvError::Empty) => None,
+            Err(TryRecvError::Disconnected) => panic!()
         }
     }
 }

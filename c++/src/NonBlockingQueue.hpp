@@ -20,7 +20,7 @@ class NonBlockingQueue
 public:
 	virtual ~NonBlockingQueue();
 
-	virtual void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+	virtual void setMaxSize(std::size_t maxSize);
 
 	virtual bool tryEnqueue(E&& portion) = 0;
 	virtual bool tryDequeue(E& portion) = 0;
@@ -32,7 +32,7 @@ NonBlockingQueue<E>::~NonBlockingQueue()
 }
 
 template <class E>
-void NonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void NonBlockingQueue<E>::setMaxSize(std::size_t maxSize)
 {
 }
 
@@ -43,38 +43,31 @@ class ConcurrentPortionQueue :
     public NonBlockingQueue<E>
 {
 private:
-    std::unique_ptr<moodycamel::ConcurrentQueue<E>> queue;
+    moodycamel::ConcurrentQueue<E> queue;
 
 public:
     ConcurrentPortionQueue();
-
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
 };
 
 template <class E>
-ConcurrentPortionQueue<E>::ConcurrentPortionQueue()
+ConcurrentPortionQueue<E>::ConcurrentPortionQueue() :
+	queue()
 {
-}
-
-template <class E>
-void ConcurrentPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
-{
-	this->queue = std::make_unique<moodycamel::ConcurrentQueue<E>>(maxSize, 0, producerCount);
 }
 
 template <class E>
 bool ConcurrentPortionQueue<E>::tryEnqueue(E&& portion)
 {
-    return this->queue->enqueue(std::move(portion));
+    return this->queue.enqueue(std::move(portion));
 }
 
 template <class E>
 bool ConcurrentPortionQueue<E>::tryDequeue(E& portion)
 {
-    return this->queue->try_dequeue(portion);
+    return this->queue.try_dequeue(portion);
 }
 
 
@@ -89,7 +82,7 @@ private:
 public:
     AtomicPortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -101,7 +94,7 @@ AtomicPortionQueue<E>::AtomicPortionQueue()
 }
 
 template <class E>
-void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void AtomicPortionQueue<E>::setMaxSize(std::size_t maxSize)
 {
 	this->queue = std::make_unique<atomic_queue::AtomicQueueB2<E>>(maxSize);
 }
@@ -109,8 +102,7 @@ void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::si
 template <class E>
 bool AtomicPortionQueue<E>::tryEnqueue(E&& portion)
 {
-    this->queue->push(std::move(portion));
-    return true;
+    return this->queue->try_push(std::move(portion));
 }
 
 template <class E>
@@ -132,7 +124,7 @@ public:
     LockfreePortionQueue();
     ~LockfreePortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -154,7 +146,7 @@ LockfreePortionQueue<E>::~LockfreePortionQueue()
 }
 
 template <class E>
-void LockfreePortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void LockfreePortionQueue<E>::setMaxSize(std::size_t maxSize)
 {
 	this->queue = std::make_unique<boost::lockfree::queue<E*>>(maxSize);
 }

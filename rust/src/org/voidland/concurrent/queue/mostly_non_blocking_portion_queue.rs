@@ -44,7 +44,7 @@ impl<E> MostlyNonBlockingPortionQueue<E>
             aProducerIsWaiting: AtomicBool::new(false),
             aConsumerIsWaiting: AtomicBool::new(false)
         };
-        ret.nonBlockingQueue.setSizeParameters(producerCount, ret.maxSize);
+        ret.nonBlockingQueue.setMaxSize(ret.maxSize);
         ret
     }
 }

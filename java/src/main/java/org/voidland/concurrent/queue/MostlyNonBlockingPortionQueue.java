@@ -36,7 +36,7 @@ public class MostlyNonBlockingPortionQueue<E>
         this.aProducerIsWaiting = new AtomicBoolean(false);
         this.aConsumerIsWaiting = new AtomicBoolean(false);
 
-        this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
+        this.nonBlockingQueue.setMaxSize(this.maxSize);
     }
     
     @Override
