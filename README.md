@@ -36,7 +36,7 @@ But the portion queue must be blocking only on hitting its bounds. Most of the t
 
 `org::voidland::concurrent::queue::MPMC_PortionQueue` is an interface for a portion queue that can be used in a multiple producer - multiple consumer scenario.  
 `org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue` is an implementation of a portion queue that wraps a non-blocking queue. It blocks only when necesssary, i.e. most of the time it has the throughput of the internal non-blocking queue.  
-`org::voidland::concurrent::queue::TextbookPortionQueue` is a blocking implementation of a portion queue. It blocks on a single mutex and uses two conditions for signaling between the consumers and the producers. The mutex works under heavy contention.
+`org::voidland::concurrent::queue::TextbookPortionQueue` is a blocking implementation of a portion queue. It blocks on a single mutex and uses two conditions for signaling between the consumers and the producers. In the test, the mutex works under heavy contention.
 
 
 ### Notes on the solution of the actual task
@@ -69,8 +69,7 @@ Some of the implementations for a given language/runtime do not yield stable mea
 - Unfair scheduler for the `syncless` implementation - with such a scheduler the more privileged threads finish too early and then the CPUs are not fully utilized for a random amount of time until the less privileged threads finish their work.
 - Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, even when deemed stable, Java's measurements are noticeably less stable than C++' and Rust's ones.
 
-Native (C++ and Rust) implementations with inherently unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
-All of the Java implementations are unstable compared to C++ and Rust and they will not be marked as such.
+Implementations with inherently unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
 
 ### Test results
 
@@ -92,15 +91,15 @@ Intel Core i5-4210M
 |---|---|---|---|
 | **C++/native** | 863 | 741 | 684 |
 | **Rust/native** | 719 | 639 | ~~334~~ |
-| **Java/JVM** | 433 |  |  |
+| **Java/JVM** | ~~433~~ | 402 | 352 |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 1663 | 1401 | 1108 |
+| **C++/native** | 1661 | 1409 | 1110 |
 | **Rust/native** | 1278 | 1147 | ~~639~~ |
-| **Java/JVM** | 937 | 841 | 666 |
+| **Java/JVM** | ~~945~~ | 855 | 655 |
 
 AMD Ryzen 7735HS
 
@@ -108,15 +107,15 @@ AMD Ryzen 7735HS
 |---|---|---|---|
 | **C++/native** | 4682 | 3551 | 1769 |
 | **Rust/native** | 3762 | 2939 | ~~725~~ |
-| **Java/JVM** | 2092 | 1621 | 886 |
+| **Java/JVM** | ~~2067~~ | 1671 | 863 |
 
 `serial` (single-threaded)
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
 | Intel Core i5-4210M | 393 | 338 | 240 |
-| Intel Core i5-10210U | 541 | 432 | 261 |
-| AMD Ryzen 7735HS | 854 | 664 | 542 |
+| Intel Core i5-10210U | 534 | 399 | 273 |
+| AMD Ryzen 7735HS | 854 | 664 | 541 |
 
 ---
 

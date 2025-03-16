@@ -25,26 +25,28 @@ The resulting JAR is `target/silo-*.jar`.
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| `concurrent` |  | 841 | 1621 |
-| `textbook` |  | 666 | 886 |
-| `blocking` |  | 694 | 1233 |
-| `syncless` | 433 | 937 | 2092 |
-| `serial` | 240 | 261 | 542 |
+| `concurrent` | 402 | 855 | 1671 |
+| `textbook` | 352 | 655 | 863 |
+| `blocking` | 352 | 689 | 1224 |
+| `syncless` | ~~433~~ | ~~945~~ | ~~2067~~ |
+| `serial` | 240 | 273 | 541 |
 
 ---  
 
+Intel Core i5-10210U
+
 | Implementation / JVM  version | 8 | 11 | 17 | 21 |
 |---|---|---|---|---|
-| `concurrent` | 1902 | 1925 | 1673 | 1621 |
-| `textbook` | 960 | 843 | 797 | 886 |
-| `blocking` | 912 | 977 | 1020 | 1233 |
-| `syncless` | 2319 | 2062 | 1796 | 2092 |
-| `serial` | 547 | 515 | 519 | 542 |
+| `concurrent` | 2021 | 2012 | 1867 | 1671 |
+| `textbook` | 960 | 942 | 862 | 863 |
+| `blocking` | 994 | 977 | 1106 | 1224 |
+| `syncless` | ~~2319~~ | ~~2267~~ | ~~1786~~ | ~~2067~~ |
+| `serial` | 547 | 514 | 518 | 541 |
 
 General results:
 - `concurrent` is the winner among the queues.
 - There are no noticeable performance improvements in the JVM between version 8 and version 21.
 
 Some remarks: 
-- The thread scheduler is very unfair. Thus the `syncless` implementation is very far from perfect. The most privileged thread finishes its job at less than 90% of the total job done.
-- The Java mutex performs very badly under high contention, similar to the standard mutex in Rust and unlike C++.
+- The thread scheduler is very unfair (in a random manner). The most privileged thread finishes its job at less than 90% of the total job done. Thus the `syncless` implementation is very far from perfect and its measurements are very unstable. 
+- `ReentrantLock` performs very badly under high contention, similar to the standard mutex in Rust and unlike C++.

@@ -49,15 +49,14 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|
-| concurrent | 730 | 1374 | 3447 |
-| atomic | 741 | 1401 | 3551 |
-| lockfree | 715 | 1317 | 2833 |
-| textbook | 684 | 1108 | 1769 |
-| syncless | 863 | 1663 | 4682 |
-| serial | 393 | 506 | 854 |
+| concurrent | 730 | 1368 | 3447 |
+| atomic | 741 | 1409 | 3551 |
+| lockfree | 715 | 1321 | 2833 |
+| textbook | 684 | 1110 | 1769 |
+| syncless | 863 | 1661 | 4682 |
+| serial | 393 | 534 | 854 |
 | onetbb | ~~444~~ | ~~670~~ | ~~936~~ |
-| onetbb_bounded | ~~331~~ | ~~702~~ | ~~741~~ |
-| sync_bounded |  | ~~203~~ | ~~1433~~ |
+| onetbb_bounded | ~~331~~ | ~~605~~ | ~~741~~ |
 
 General results:
 - `concurrent` and `atomic` have almost the same performance and can be considered as co-winners among the queues.
@@ -66,7 +65,8 @@ Some remarks:
 - The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done.
 - At first glance, `oneapi::tbb::concurrent_bounded_queue` should work like `org::voidland::concurrent::MostlyNonBlockingPortionQueue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low for this to be true.
 - The average speed of the oneTBB queues is inexplicably low. Also, their performance is erratic - the speed varies wildly.
-- `boost::sync_bounded_queue` is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock. Also, its performance is erratic - the speed varies wildly.
+- `boost::sync_bounded_queue` is buggy. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock. That is why it is not measured.
 
 ## TODO
 - Measure the performance with Clang. The tests so far have been performed with GCC.
+- Find and report the bug in `boost::sync_bounded_queue`.
