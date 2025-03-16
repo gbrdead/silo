@@ -14,31 +14,24 @@ namespace org::voidland::concurrent::queue
 {
 
 
-template <class E>
+template <typename E>
 class NonBlockingQueue
 {
 public:
 	virtual ~NonBlockingQueue();
 
-	virtual void setMaxSize(std::size_t maxSize);
-
 	virtual bool tryEnqueue(E&& portion) = 0;
 	virtual bool tryDequeue(E& portion) = 0;
 };
 
-template <class E>
+template <typename E>
 NonBlockingQueue<E>::~NonBlockingQueue()
 {
 }
 
-template <class E>
-void NonBlockingQueue<E>::setMaxSize(std::size_t maxSize)
-{
-}
 
 
-
-template <class E>
+template <typename E>
 class ConcurrentPortionQueue :
     public NonBlockingQueue<E>
 {
@@ -46,25 +39,25 @@ private:
     moodycamel::ConcurrentQueue<E> queue;
 
 public:
-    ConcurrentPortionQueue();
+    ConcurrentPortionQueue(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
 };
 
-template <class E>
-ConcurrentPortionQueue<E>::ConcurrentPortionQueue() :
+template <typename E>
+ConcurrentPortionQueue<E>::ConcurrentPortionQueue(std::size_t maxSize) :
 	queue()
 {
 }
 
-template <class E>
+template <typename E>
 bool ConcurrentPortionQueue<E>::tryEnqueue(E&& portion)
 {
     return this->queue.enqueue(std::move(portion));
 }
 
-template <class E>
+template <typename E>
 bool ConcurrentPortionQueue<E>::tryDequeue(E& portion)
 {
     return this->queue.try_dequeue(portion);
@@ -72,90 +65,76 @@ bool ConcurrentPortionQueue<E>::tryDequeue(E& portion)
 
 
 
-template <class E>
+template <typename E>
 class AtomicPortionQueue :
     public NonBlockingQueue<E>
 {
 private:
-    std::unique_ptr<atomic_queue::AtomicQueueB2<E>> queue;
+    atomic_queue::AtomicQueueB2<E> queue;
 
 public:
-    AtomicPortionQueue();
-
-    void setMaxSize(std::size_t maxSize);
+    AtomicPortionQueue(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
 };
 
-template <class E>
-AtomicPortionQueue<E>::AtomicPortionQueue()
+template <typename E>
+AtomicPortionQueue<E>::AtomicPortionQueue(std::size_t maxSize) :
+	queue(maxSize)
 {
 }
 
-template <class E>
-void AtomicPortionQueue<E>::setMaxSize(std::size_t maxSize)
-{
-	this->queue = std::make_unique<atomic_queue::AtomicQueueB2<E>>(maxSize);
-}
-
-template <class E>
+template <typename E>
 bool AtomicPortionQueue<E>::tryEnqueue(E&& portion)
 {
-    return this->queue->try_push(std::move(portion));
+    return this->queue.try_push(std::move(portion));
 }
 
-template <class E>
+template <typename E>
 bool AtomicPortionQueue<E>::tryDequeue(E& portion)
 {
-    return this->queue->try_pop(portion);
+    return this->queue.try_pop(portion);
 }
 
 
 
-template <class E>
+template <typename E>
 class LockfreePortionQueue :
     public NonBlockingQueue<E>
 {
 private:
-    std::unique_ptr<boost::lockfree::queue<E*>> queue;
+    boost::lockfree::queue<E*> queue;
 
 public:
-    LockfreePortionQueue();
+    LockfreePortionQueue(std::size_t maxSize);
     ~LockfreePortionQueue();
-
-    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
 };
 
-template <class E>
-LockfreePortionQueue<E>::LockfreePortionQueue()
+template <typename E>
+LockfreePortionQueue<E>::LockfreePortionQueue(std::size_t maxSize) :
+	queue(maxSize)
 {
 }
 
-template <class E>
+template <typename E>
 LockfreePortionQueue<E>::~LockfreePortionQueue()
 {
-    this->queue->consume_all(
+    this->queue.consume_all(
         [](E* portionCopy)
         {
             delete portionCopy;
         });
 }
 
-template <class E>
-void LockfreePortionQueue<E>::setMaxSize(std::size_t maxSize)
-{
-	this->queue = std::make_unique<boost::lockfree::queue<E*>>(maxSize);
-}
-
-template <class E>
+template <typename E>
 bool LockfreePortionQueue<E>::tryEnqueue(E&& portion)
 {
     E* portionCopy = new E(std::move(portion));
-    bool success = this->queue->bounded_push(portionCopy);
+    bool success = this->queue.bounded_push(portionCopy);
     if (!success)
     {
         portion = std::move(*portionCopy);
@@ -164,11 +143,11 @@ bool LockfreePortionQueue<E>::tryEnqueue(E&& portion)
     return success;
 }
 
-template <class E>
+template <typename E>
 bool LockfreePortionQueue<E>::tryDequeue(E& portion)
 {
     E* portionCopy;
-    bool success = this->queue->pop(portionCopy);
+    bool success = this->queue.pop(portionCopy);
     if (success)
     {
         portion = std::move(*portionCopy);
@@ -179,7 +158,7 @@ bool LockfreePortionQueue<E>::tryDequeue(E& portion)
 
 
 
-template <class E>
+template <typename E>
 class OneTBB_PortionQueue :
     public NonBlockingQueue<E>
 {
@@ -187,26 +166,26 @@ private:
     oneapi::tbb::concurrent_queue<E> queue;
 
 public:
-    OneTBB_PortionQueue();
+    OneTBB_PortionQueue(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
 };
 
-template <class E>
-OneTBB_PortionQueue<E>::OneTBB_PortionQueue() :
+template <typename E>
+OneTBB_PortionQueue<E>::OneTBB_PortionQueue(std::size_t maxSize) :
 	queue()
 {
 }
 
-template <class E>
+template <typename E>
 bool OneTBB_PortionQueue<E>::tryEnqueue(E&& portion)
 {
     this->queue.push(std::move(portion));
     return true;
 }
 
-template <class E>
+template <typename E>
 bool OneTBB_PortionQueue<E>::tryDequeue(E& portion)
 {
     return this->queue.try_pop(portion);

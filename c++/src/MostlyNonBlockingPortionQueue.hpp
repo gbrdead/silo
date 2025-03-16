@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <utility>
 #include <memory>
+#include <type_traits>
 
 
 
@@ -16,12 +17,15 @@ namespace org::voidland::concurrent::queue
 {
 
 
-template <class E>
+template <typename E, typename NBQ>
 class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
 {
+	static_assert(std::is_convertible<NBQ*, NonBlockingQueue<E>*>::value);
+	static_assert(std::is_constructible<NBQ, std::size_t>::value);
+
 private:
-	std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
+	NBQ nonBlockingQueue;
 
     std::size_t maxSize;
     std::atomic<std::size_t> size;
@@ -39,7 +43,7 @@ private:
     std::atomic<bool> aConsumerIsWaiting;
 
 public:
-    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue);
+    MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -50,11 +54,20 @@ public:
     std::size_t getMaxSize();
 };
 
+template <typename E>
+using ConcurrentBlownQueue = MostlyNonBlockingPortionQueue<E, ConcurrentPortionQueue<E>>;
+template <typename E>
+using AtomicBlownQueue = MostlyNonBlockingPortionQueue<E, AtomicPortionQueue<E>>;
+template <typename E>
+using LockfreeBlownQueue = MostlyNonBlockingPortionQueue<E, LockfreePortionQueue<E>>;
+template <typename E>
+using OneTBB_BlownQueue = MostlyNonBlockingPortionQueue<E, OneTBB_PortionQueue<E>>;
 
-template <class E>
-MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue) :
-	nonBlockingQueue(std::move(nonBlockingQueue)),
+
+template <typename E, typename NBQ>
+MostlyNonBlockingPortionQueue<E, NBQ>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
+	nonBlockingQueue(this->maxSize),
     size(0),
     workDone(false),
     notFullMutex(),
@@ -66,18 +79,17 @@ MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t init
 	aProducerIsWaiting(false),
 	aConsumerIsWaiting(false)
 {
-	this->nonBlockingQueue->setMaxSize(this->maxSize);
 }
 
-template <class E>
-void MostlyNonBlockingPortionQueue<E>::addPortion(const E& portion)
+template <typename E, typename NBQ>
+void MostlyNonBlockingPortionQueue<E, NBQ>::addPortion(const E& portion)
 {
     E portionCopy(portion);
     this->addPortion(std::move(portionCopy));
 }
 
-template <class E>
-void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
+template <typename E, typename NBQ>
+void MostlyNonBlockingPortionQueue<E, NBQ>::addPortion(E&& portion)
 {
     while (true)
     {
@@ -92,7 +104,7 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
             }
         }
 
-        if (this->nonBlockingQueue->tryEnqueue(std::move(portion)))
+        if (this->nonBlockingQueue.tryEnqueue(std::move(portion)))
         {
         	break;
         }
@@ -107,12 +119,12 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
     }
 }
 
-template <class E>
-std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
+template <typename E, typename NBQ>
+std::optional<E> MostlyNonBlockingPortionQueue<E, NBQ>::retrievePortion()
 {
     E portion;
 
-    if (!this->nonBlockingQueue->tryDequeue(portion))
+    if (!this->nonBlockingQueue.tryDequeue(portion))
     {
         std::unique_lock lock(this->notEmptyMutex);
         while (true)
@@ -122,7 +134,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
                 return std::nullopt;
             }
 
-        	if (this->nonBlockingQueue->tryDequeue(portion))
+        	if (this->nonBlockingQueue.tryDequeue(portion))
         	{
         		break;
         	}
@@ -149,8 +161,8 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
     return portion;
 }
 
-template <class E>
-void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
+template <typename E, typename NBQ>
+void MostlyNonBlockingPortionQueue<E, NBQ>::ensureAllPortionsAreRetrieved()
 {
     {
         std::lock_guard lock(this->notEmptyMutex);
@@ -166,22 +178,22 @@ void MostlyNonBlockingPortionQueue<E>::ensureAllPortionsAreRetrieved()
     }
 }
 
-template <class E>
-void MostlyNonBlockingPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
+template <typename E, typename NBQ>
+void MostlyNonBlockingPortionQueue<E, NBQ>::stopConsumers(std::size_t finalConsumerCount)
 {
 	std::lock_guard lock(this->notEmptyMutex);
 	this->workDone = true;
 	this->notEmptyCondition.notify_all();
 }
 
-template <class E>
-std::size_t MostlyNonBlockingPortionQueue<E>::getSize()
+template <typename E, typename NBQ>
+std::size_t MostlyNonBlockingPortionQueue<E, NBQ>::getSize()
 {
     return this->size.load(std::memory_order_relaxed);
 }
 
-template <class E>
-std::size_t MostlyNonBlockingPortionQueue<E>::getMaxSize()
+template <typename E, typename NBQ>
+std::size_t MostlyNonBlockingPortionQueue<E, NBQ>::getMaxSize()
 {
     return this->maxSize;
 }

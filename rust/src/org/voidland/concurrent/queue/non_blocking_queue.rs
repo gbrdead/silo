@@ -13,10 +13,7 @@ use std::sync::mpsc::TryRecvError;
 
 pub trait NonBlockingQueue<E> : Send + Sync
 {
-    fn setMaxSize(&mut self, _maxSize: usize)
-    {
-    }
-
+    fn new(maxSize: usize) -> Self;
     fn tryEnqueue(&self, portion: E) -> Result<(), E>;
     fn tryDequeue(&self) -> Option<E>;
 }
@@ -25,30 +22,22 @@ pub trait NonBlockingQueue<E> : Send + Sync
 
 pub struct ConcurrentPortionQueue<E>
 {
-    queue: Option<ConcurrentQueue<E>>
-}
-
-impl<E> ConcurrentPortionQueue<E>
-{
-    pub fn new() -> Self
-    {
-        Self
-        {
-            queue: None
-        }
-    }
+    queue: ConcurrentQueue<E>
 }
 
 impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
 {
-    fn setMaxSize(&mut self, maxSize: usize)
+    fn new(maxSize: usize) -> Self
     {
-        self.queue = Some(ConcurrentQueue::<E>::bounded(maxSize));
+        Self
+        {
+            queue: ConcurrentQueue::<E>::bounded(maxSize)
+        }
     }
 
     fn tryEnqueue(&self, portion: E) -> Result<(), E>
     {
-        match self.queue.as_ref().unwrap().push(portion)
+        match self.queue.push(portion)
         {
             Ok(_) => Ok(()),
             Err(PushError::Full(portion)) => Err(portion),
@@ -58,7 +47,7 @@ impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
     
     fn tryDequeue(&self) -> Option<E>
     {
-        match self.queue.as_ref().unwrap().pop()
+        match self.queue.pop()
         {
             Ok(portion) => Some(portion),
             Err(PopError::Empty) => None,
@@ -75,9 +64,9 @@ pub struct AsyncMpmcPortionQueue<E>
     receiver: Receiver<E>
 }
 
-impl<E> AsyncMpmcPortionQueue<E>
+impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
 {
-    pub fn new() -> Self
+    fn new(_maxSize: usize) -> Self
     {
         let (sender, receiver): (Sender<E>, Receiver<E>) = channel::<E>();
         Self
@@ -86,10 +75,7 @@ impl<E> AsyncMpmcPortionQueue<E>
             receiver: receiver
         }
     }
-}
 
-impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
-{
     fn tryEnqueue(&self, portion: E) -> Result<(), E>
     {
         match self.sender.try_send(portion)

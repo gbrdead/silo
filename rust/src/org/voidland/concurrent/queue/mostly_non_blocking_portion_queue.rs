@@ -1,16 +1,26 @@
 use super::MPMC_PortionQueue;
 use super::NonBlockingQueue;
 
+use std::marker::PhantomData;
+use std::marker::Send;
+use std::marker::Sync;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::sync::Condvar;
 
+use super::non_blocking_queue::AsyncMpmcPortionQueue;
+use super::non_blocking_queue::ConcurrentPortionQueue;
 
-pub struct MostlyNonBlockingPortionQueue<E>
+pub type AsyncMpmcBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, AsyncMpmcPortionQueue<E>>;
+pub type ConcurrentBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, ConcurrentPortionQueue<E>>;
+
+
+pub struct MostlyNonBlockingPortionQueue<E: Send + Sync, NBQ: NonBlockingQueue<E>>
 {
-    nonBlockingQueue: Box<dyn NonBlockingQueue<E>>,
+    _t: PhantomData<E>,
+    nonBlockingQueue: NBQ,
     
     maxSize: usize,
     size: AtomicUsize,
@@ -26,14 +36,16 @@ pub struct MostlyNonBlockingPortionQueue<E>
     aConsumerIsWaiting: AtomicBool
 }
 
-impl<E> MostlyNonBlockingPortionQueue<E>
+impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MostlyNonBlockingPortionQueue<E, NBQ>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize, nonBlockingQueue: Box<dyn NonBlockingQueue<E>>) -> Self
+    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
     {
-        let mut ret: Self = Self
+        let maxSize: usize = initialConsumerCount * producerCount * 1000;
+        Self
         {
-            nonBlockingQueue: nonBlockingQueue,
-            maxSize: initialConsumerCount * producerCount * 1000,
+            _t: PhantomData,
+            nonBlockingQueue: NBQ::new(maxSize),
+            maxSize: maxSize,
             size: AtomicUsize::new(0),
             notFullMutex: Mutex::new(false),
             notEmptyMutex: Mutex::new(false),
@@ -43,13 +55,11 @@ impl<E> MostlyNonBlockingPortionQueue<E>
             emptyCondition: Condvar::new(),
             aProducerIsWaiting: AtomicBool::new(false),
             aConsumerIsWaiting: AtomicBool::new(false)
-        };
-        ret.nonBlockingQueue.setMaxSize(ret.maxSize);
-        ret
+        }
     }
 }
 
-impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
+impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E, NBQ>
 {
     fn addPortion(&self, mut portion: E)
     {

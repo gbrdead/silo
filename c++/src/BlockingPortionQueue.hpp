@@ -16,7 +16,7 @@ namespace org::voidland::concurrent::queue
 {
 
 
-template <class E>
+template <typename E>
 class TextbookPortionQueue :
     public MPMC_PortionQueue<E>
 {
@@ -44,7 +44,7 @@ public:
 };
 
 
-template <class E>
+template <typename E>
 TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
 	queue(),
     maxSize(initialConsumerCount * producerCount * 1000),
@@ -55,14 +55,14 @@ TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t initialConsumerCount, 
 {
 }
 
-template <class E>
+template <typename E>
 void TextbookPortionQueue<E>::addPortion(const E& portion)
 {
     E portionCopy(portion);
     this->addPortion(std::move(portionCopy));
 }
 
-template <class E>
+template <typename E>
 void TextbookPortionQueue<E>::addPortion(E&& portion)
 {
     std::unique_lock lock(this->mutex);
@@ -77,7 +77,7 @@ void TextbookPortionQueue<E>::addPortion(E&& portion)
     this->notEmptyCondition.notify_one();
 }
 
-template <class E>
+template <typename E>
 std::optional<E> TextbookPortionQueue<E>::retrievePortion()
 {
     std::unique_lock lock(this->mutex);
@@ -100,7 +100,7 @@ std::optional<E> TextbookPortionQueue<E>::retrievePortion()
     return portion;
 }
 
-template <class E>
+template <typename E>
 void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
     std::unique_lock lock(this->mutex);
@@ -111,7 +111,7 @@ void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
     }
 }
 
-template <class E>
+template <typename E>
 void TextbookPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
     std::unique_lock lock(this->mutex);
@@ -121,7 +121,7 @@ void TextbookPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
     this->notEmptyCondition.notify_all();
 }
 
-template <class E>
+template <typename E>
 std::size_t TextbookPortionQueue<E>::getSize()
 {
     std::unique_lock lock(this->mutex);
@@ -129,7 +129,7 @@ std::size_t TextbookPortionQueue<E>::getSize()
     return this->queue.size();
 }
 
-template <class E>
+template <typename E>
 std::size_t TextbookPortionQueue<E>::getMaxSize()
 {
     return this->maxSize;
@@ -137,7 +137,7 @@ std::size_t TextbookPortionQueue<E>::getMaxSize()
 
 
 
-template <class E>
+template <typename E>
 class OneTBB_BoundedPortionQueue :
     public MPMC_PortionQueue<E>
 {
@@ -158,7 +158,7 @@ public:
 };
 
 
-template <class E>
+template <typename E>
 OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
 	queue()
@@ -166,19 +166,19 @@ OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t initialCon
     this->queue.set_capacity(this->maxSize);
 }
 
-template <class E>
+template <typename E>
 void OneTBB_BoundedPortionQueue<E>::addPortion(const E& portion)
 {
     this->queue.push(portion);
 }
 
-template <class E>
+template <typename E>
 void OneTBB_BoundedPortionQueue<E>::addPortion(E&& portion)
 {
     this->queue.push(std::move(portion));
 }
 
-template <class E>
+template <typename E>
 std::optional<E> OneTBB_BoundedPortionQueue<E>::retrievePortion()
 {
     std::optional<E> portion;
@@ -186,7 +186,7 @@ std::optional<E> OneTBB_BoundedPortionQueue<E>::retrievePortion()
     return portion;
 }
 
-template <class E>
+template <typename E>
 void OneTBB_BoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
     while (!this->queue.empty())
@@ -195,7 +195,7 @@ void OneTBB_BoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
     }
 }
 
-template <class E>
+template <typename E>
 void OneTBB_BoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
     for (std::size_t i = 0; i < finalConsumerCount; i++)
@@ -204,13 +204,13 @@ void OneTBB_BoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount
     }
 }
 
-template <class E>
+template <typename E>
 std::size_t OneTBB_BoundedPortionQueue<E>::getSize()
 {
     return this->queue.size();
 }
 
-template <class E>
+template <typename E>
 std::size_t OneTBB_BoundedPortionQueue<E>::getMaxSize()
 {
     return this->maxSize;
@@ -218,7 +218,7 @@ std::size_t OneTBB_BoundedPortionQueue<E>::getMaxSize()
 
 
 
-template <class E>
+template <typename E>
 class SyncBoundedPortionQueue :
     public MPMC_PortionQueue<E>
 {
@@ -239,26 +239,26 @@ public:
 };
 
 
-template <class E>
+template <typename E>
 SyncBoundedPortionQueue<E>::SyncBoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
 	queue(this->maxSize)
 {
 }
 
-template <class E>
+template <typename E>
 void SyncBoundedPortionQueue<E>::addPortion(const E& portion)
 {
     this->queue.push_back(portion);
 }
 
-template <class E>
+template <typename E>
 void SyncBoundedPortionQueue<E>::addPortion(E&& portion)
 {
     this->queue.push_back(std::move(portion));
 }
 
-template <class E>
+template <typename E>
 std::optional<E> SyncBoundedPortionQueue<E>::retrievePortion()
 {
     std::optional<E> portion;
@@ -266,7 +266,7 @@ std::optional<E> SyncBoundedPortionQueue<E>::retrievePortion()
     return portion;
 }
 
-template <class E>
+template <typename E>
 void SyncBoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
 {
     while (!this->queue.empty())
@@ -275,7 +275,7 @@ void SyncBoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
     }
 }
 
-template <class E>
+template <typename E>
 void SyncBoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
 {
     for (std::size_t i = 0; i < finalConsumerCount; i++)
@@ -284,13 +284,13 @@ void SyncBoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
     }
 }
 
-template <class E>
+template <typename E>
 std::size_t SyncBoundedPortionQueue<E>::getSize()
 {
     return this->queue.size();
 }
 
-template <class E>
+template <typename E>
 std::size_t SyncBoundedPortionQueue<E>::getMaxSize()
 {
     return this->maxSize;
