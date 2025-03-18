@@ -20,7 +20,7 @@ class NonBlockingQueue
 public:
 	virtual ~NonBlockingQueue();
 
-	virtual void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+	virtual void setMaxSize(std::size_t maxSize);
 
 	virtual bool tryEnqueue(E&& portion) = 0;
 	virtual bool tryDequeue(E& portion) = 0;
@@ -32,7 +32,7 @@ NonBlockingQueue<E>::~NonBlockingQueue()
 }
 
 template <class E>
-void NonBlockingQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void NonBlockingQueue<E>::setMaxSize(std::size_t maxSize)
 {
 }
 
@@ -48,7 +48,7 @@ private:
 public:
     ConcurrentPortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -60,9 +60,9 @@ ConcurrentPortionQueue<E>::ConcurrentPortionQueue()
 }
 
 template <class E>
-void ConcurrentPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void ConcurrentPortionQueue<E>::setMaxSize(std::size_t maxSize)
 {
-	this->queue = std::make_unique<moodycamel::ConcurrentQueue<E>>(maxSize, 0, producerCount);
+	this->queue = std::make_unique<moodycamel::ConcurrentQueue<E>>(maxSize);
 }
 
 template <class E>
@@ -89,7 +89,7 @@ private:
 public:
     AtomicPortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -101,7 +101,7 @@ AtomicPortionQueue<E>::AtomicPortionQueue()
 }
 
 template <class E>
-void AtomicPortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void AtomicPortionQueue<E>::setMaxSize(std::size_t maxSize)
 {
 	this->queue = std::make_unique<atomic_queue::AtomicQueueB2<E>>(maxSize);
 }
@@ -132,7 +132,7 @@ public:
     LockfreePortionQueue();
     ~LockfreePortionQueue();
 
-    void setSizeParameters(std::size_t producerCount, std::size_t maxSize);
+    void setMaxSize(std::size_t maxSize);
 
     bool tryEnqueue(E&& portion);
     bool tryDequeue(E& portion);
@@ -154,7 +154,7 @@ LockfreePortionQueue<E>::~LockfreePortionQueue()
 }
 
 template <class E>
-void LockfreePortionQueue<E>::setSizeParameters(std::size_t producerCount, std::size_t maxSize)
+void LockfreePortionQueue<E>::setMaxSize(std::size_t maxSize)
 {
 	this->queue = std::make_unique<boost::lockfree::queue<E*>>(maxSize);
 }
