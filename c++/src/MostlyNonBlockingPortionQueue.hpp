@@ -10,12 +10,16 @@
 #include <utility>
 #include <memory>
 #include <type_traits>
+#include <new>
 
 
 
 namespace org::voidland::concurrent::queue
 {
 
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
 
 template <typename E, typename NBQ>
 class MostlyNonBlockingPortionQueue :
@@ -25,22 +29,21 @@ class MostlyNonBlockingPortionQueue :
 	static_assert(std::is_constructible<NBQ, std::size_t>::value);
 
 private:
-	NBQ nonBlockingQueue;
+	alignas(std::hardware_destructive_interference_size) NBQ nonBlockingQueue;
+	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
 
-    std::size_t maxSize;
-    std::atomic<std::size_t> size;
-
-    bool workDone;
-
-    std::mutex notFullMutex;
-    std::mutex notEmptyMutex;
-    std::mutex emptyMutex;
+    alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
     std::condition_variable notFullCondition;
+    alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
     std::condition_variable notEmptyCondition;
+    alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
     std::condition_variable emptyCondition;
 
-    std::atomic<bool> aProducerIsWaiting;
-    std::atomic<bool> aConsumerIsWaiting;
+	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
+	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aConsumerIsWaiting;
+
+	alignas(std::hardware_destructive_interference_size) std::size_t maxSize;
+    bool workDone;
 
 public:
     MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
@@ -53,6 +56,9 @@ public:
     std::size_t getSize();
     std::size_t getMaxSize();
 };
+
+#pragma GCC diagnostic pop
+
 
 template <typename E>
 using ConcurrentBlownQueue = MostlyNonBlockingPortionQueue<E, ConcurrentPortionQueue<E>>;

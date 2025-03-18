@@ -1,6 +1,7 @@
 use super::MPMC_PortionQueue;
 use super::NonBlockingQueue;
 
+use crossbeam::utils::CachePadded;
 use std::marker::PhantomData;
 use std::marker::Send;
 use std::marker::Sync;
@@ -19,21 +20,22 @@ pub type ConcurrentBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, Concurrent
 
 pub struct MostlyNonBlockingPortionQueue<E: Send + Sync, NBQ: NonBlockingQueue<E>>
 {
-    _t: PhantomData<E>,
-    nonBlockingQueue: NBQ,
+    nonBlockingQueue: CachePadded<NBQ>,
+    size: CachePadded<AtomicUsize>,
     
+    notFullMutex: CachePadded<Mutex<bool>>,
+    notFullCondition: CachePadded<Condvar>,
+    notEmptyMutex: CachePadded<Mutex<bool>>,
+    notEmptyCondition: CachePadded<Condvar>,
+    emptyMutex: CachePadded<Mutex<bool>>,
+    emptyCondition: CachePadded<Condvar>,
+    
+    aProducerIsWaiting: CachePadded<AtomicBool>,
+    aConsumerIsWaiting: CachePadded<AtomicBool>,
+
     maxSize: usize,
-    size: AtomicUsize,
     
-    notFullMutex: Mutex<bool>,
-    notEmptyMutex: Mutex<bool>,
-    emptyMutex: Mutex<bool>,
-    notFullCondition: Condvar,
-    notEmptyCondition: Condvar,
-    emptyCondition: Condvar,
-    
-    aProducerIsWaiting: AtomicBool,
-    aConsumerIsWaiting: AtomicBool
+    _t: PhantomData<E>
 }
 
 impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MostlyNonBlockingPortionQueue<E, NBQ>
@@ -44,17 +46,17 @@ impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MostlyNonBlockingPortionQueue<E, 
         Self
         {
             _t: PhantomData,
-            nonBlockingQueue: NBQ::new(maxSize),
+            nonBlockingQueue: CachePadded::new(NBQ::new(maxSize)),
             maxSize: maxSize,
-            size: AtomicUsize::new(0),
-            notFullMutex: Mutex::new(false),
-            notEmptyMutex: Mutex::new(false),
-            emptyMutex: Mutex::new(false),
-            notFullCondition: Condvar::new(),
-            notEmptyCondition: Condvar::new(),
-            emptyCondition: Condvar::new(),
-            aProducerIsWaiting: AtomicBool::new(false),
-            aConsumerIsWaiting: AtomicBool::new(false)
+            size: CachePadded::new(AtomicUsize::new(0)),
+            notFullMutex: CachePadded::new(Mutex::new(false)),
+            notEmptyMutex: CachePadded::new(Mutex::new(false)),
+            emptyMutex: CachePadded::new(Mutex::new(false)),
+            notFullCondition: CachePadded::new(Condvar::new()),
+            notEmptyCondition: CachePadded::new(Condvar::new()),
+            emptyCondition: CachePadded::new(Condvar::new()),
+            aProducerIsWaiting: CachePadded::new(AtomicBool::new(false)),
+            aConsumerIsWaiting: CachePadded::new(AtomicBool::new(false))
         }
     }
 }

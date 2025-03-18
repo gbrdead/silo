@@ -10,10 +10,7 @@ public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
 	private NonBlockingQueue<E> nonBlockingQueue;
-	
-    private int maxSize;
-    private AtomicInteger size;
-    private boolean workDone;
+	private AtomicInteger size;
     
     private Object notFullCondition;
     private Object notEmptyCondition;
@@ -21,7 +18,10 @@ public class MostlyNonBlockingPortionQueue<E>
     
     private AtomicBoolean aProducerIsWaiting;
     private AtomicBoolean aConsumerIsWaiting;
-    
+
+    private int maxSize;
+    private boolean workDone;
+
     
     @SuppressWarnings("unchecked")
 	public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, Class<?> nonBlockingQueueClass)

@@ -7,6 +7,7 @@ edition = "2024"
 regex = "1.11"
 concurrent-queue = "2.5"
 parking_lot = "0.12"
+crossbeam = "0.8"
 
 [[bin]]
 name = "silo"
