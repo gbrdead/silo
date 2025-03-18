@@ -18,6 +18,9 @@ namespace org::voidland::concurrent::queue
 {
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+
 template <typename E, typename NBQ>
 class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
@@ -27,20 +30,20 @@ class MostlyNonBlockingPortionQueue :
 
 private:
 	std::unique_ptr<NBQ> nonBlockingQueue;
-	std::atomic<std::size_t> size;
-
-    std::mutex notFullMutex;
-    std::condition_variable notFullCondition;
-    std::mutex notEmptyMutex;
-    std::condition_variable notEmptyCondition;
-    std::mutex emptyMutex;
-    std::condition_variable emptyCondition;
-
-	std::atomic<bool> aProducerIsWaiting;
-	std::atomic<bool> aConsumerIsWaiting;
-
 	std::size_t maxSize;
     bool workDone;
+
+	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
+
+    alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
+    std::condition_variable notFullCondition;
+    alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
+    std::condition_variable notEmptyCondition;
+    alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
+    std::condition_variable emptyCondition;
+
+	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
+	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aConsumerIsWaiting;
 
 public:
     MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
@@ -53,6 +56,8 @@ public:
     std::size_t getSize();
     std::size_t getMaxSize();
 };
+
+#pragma GCC diagnostic pop
 
 
 template <typename E>
