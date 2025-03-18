@@ -1,6 +1,5 @@
 package org.voidland.concurrent.queue;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,7 +9,10 @@ public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
 	private NonBlockingQueue<E> nonBlockingQueue;
-	private AtomicInteger size;
+	
+    private int maxSize;
+    private AtomicInteger size;
+    private boolean workDone;
     
     private Object notFullCondition;
     private Object notEmptyCondition;
@@ -18,18 +20,12 @@ public class MostlyNonBlockingPortionQueue<E>
     
     private AtomicBoolean aProducerIsWaiting;
     private AtomicBoolean aConsumerIsWaiting;
-
-    private int maxSize;
-    private boolean workDone;
-
     
-    @SuppressWarnings("unchecked")
-	public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, Class<?> nonBlockingQueueClass)
-    		throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException
+    
+    public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, NonBlockingQueue<E> nonBlockingQueue)
     {
+    	this.nonBlockingQueue = nonBlockingQueue;
         this.maxSize = initialConsumerCount * producerCount * 1000;
-        this.nonBlockingQueue = (NonBlockingQueue<E>)nonBlockingQueueClass.getConstructor(int.class).newInstance(this.maxSize);
-        
         this.size = new AtomicInteger(0);
         this.workDone = false;
         
@@ -40,7 +36,7 @@ public class MostlyNonBlockingPortionQueue<E>
         this.aProducerIsWaiting = new AtomicBoolean(false);
         this.aConsumerIsWaiting = new AtomicBoolean(false);
 
-        this.nonBlockingQueue.setMaxSize(this.maxSize);
+        this.nonBlockingQueue.setSizeParameters(producerCount, this.maxSize + producerCount);
     }
     
     @Override

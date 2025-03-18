@@ -6,8 +6,10 @@
 pub mod org;
 
 use org::voidland::concurrent::VERBOSE;
-use org::voidland::concurrent::queue::ConcurrentBlownQueue;
-use org::voidland::concurrent::queue::AsyncMpmcBlownQueue;
+use org::voidland::concurrent::queue::ConcurrentPortionQueue;
+use org::voidland::concurrent::queue::AsyncMpmcPortionQueue;
+use org::voidland::concurrent::queue::NonBlockingQueue;
+use org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
 use org::voidland::concurrent::queue::MPMC_PortionQueue;
 use org::voidland::concurrent::queue::StdTextbookPortionQueue;
 use org::voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
@@ -92,8 +94,9 @@ fn main()
             let initialConsumerCount: usize = cpuCount * 3;
             let producerCount:usize = cpuCount;
 
+            let nonBlockingQueue: Box<dyn NonBlockingQueue<Grille>> = Box::new(ConcurrentPortionQueue::<Grille>::new());
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(ConcurrentBlownQueue::<Grille>::new(initialConsumerCount, producerCount));
+                Arc::new(MostlyNonBlockingPortionQueue::new(initialConsumerCount, producerCount, nonBlockingQueue));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "async_mpmc" =>
@@ -101,8 +104,9 @@ fn main()
             let initialConsumerCount: usize = cpuCount * 3;
             let producerCount:usize = cpuCount;
 
+            let nonBlockingQueue: Box<dyn NonBlockingQueue<Grille>> = Box::new(AsyncMpmcPortionQueue::<Grille>::new());
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(AsyncMpmcBlownQueue::<Grille>::new(initialConsumerCount, producerCount));
+                Arc::new(MostlyNonBlockingPortionQueue::new(initialConsumerCount, producerCount, nonBlockingQueue));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook" =>

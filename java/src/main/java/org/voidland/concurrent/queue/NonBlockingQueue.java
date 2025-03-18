@@ -3,7 +3,7 @@ package org.voidland.concurrent.queue;
 
 public interface NonBlockingQueue<E>
 {
-	default void setMaxSize(int maxSize)
+	default void setSizeParameters(int producerCount, int maxSize)
 	{
 	}
 	

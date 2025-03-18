@@ -1,67 +1,55 @@
 use super::MPMC_PortionQueue;
 use super::NonBlockingQueue;
 
-use crossbeam::utils::CachePadded;
-use std::marker::PhantomData;
-use std::marker::Send;
-use std::marker::Sync;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::sync::Condvar;
 
-use super::non_blocking_queue::AsyncMpmcPortionQueue;
-use super::non_blocking_queue::ConcurrentPortionQueue;
 
-pub type AsyncMpmcBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, AsyncMpmcPortionQueue<E>>;
-pub type ConcurrentBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, ConcurrentPortionQueue<E>>;
-
-
-pub struct MostlyNonBlockingPortionQueue<E: Send + Sync, NBQ: NonBlockingQueue<E>>
+pub struct MostlyNonBlockingPortionQueue<E>
 {
-    nonBlockingQueue: CachePadded<NBQ>,
-    size: CachePadded<AtomicUsize>,
+    nonBlockingQueue: Box<dyn NonBlockingQueue<E>>,
     
-    notFullMutex: CachePadded<Mutex<bool>>,
-    notFullCondition: CachePadded<Condvar>,
-    notEmptyMutex: CachePadded<Mutex<bool>>,
-    notEmptyCondition: CachePadded<Condvar>,
-    emptyMutex: CachePadded<Mutex<bool>>,
-    emptyCondition: CachePadded<Condvar>,
-    
-    aProducerIsWaiting: CachePadded<AtomicBool>,
-    aConsumerIsWaiting: CachePadded<AtomicBool>,
-
     maxSize: usize,
+    size: AtomicUsize,
     
-    _t: PhantomData<E>
+    notFullMutex: Mutex<bool>,
+    notEmptyMutex: Mutex<bool>,
+    emptyMutex: Mutex<bool>,
+    notFullCondition: Condvar,
+    notEmptyCondition: Condvar,
+    emptyCondition: Condvar,
+    
+    aProducerIsWaiting: AtomicBool,
+    aConsumerIsWaiting: AtomicBool
 }
 
-impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MostlyNonBlockingPortionQueue<E, NBQ>
+impl<E> MostlyNonBlockingPortionQueue<E>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
+    pub fn new(initialConsumerCount: usize, producerCount: usize, nonBlockingQueue: Box<dyn NonBlockingQueue<E>>) -> Self
     {
-        let maxSize: usize = initialConsumerCount * producerCount * 1000;
-        Self
+        let mut ret: Self = Self
         {
-            _t: PhantomData,
-            nonBlockingQueue: CachePadded::new(NBQ::new(maxSize)),
-            maxSize: maxSize,
-            size: CachePadded::new(AtomicUsize::new(0)),
-            notFullMutex: CachePadded::new(Mutex::new(false)),
-            notEmptyMutex: CachePadded::new(Mutex::new(false)),
-            emptyMutex: CachePadded::new(Mutex::new(false)),
-            notFullCondition: CachePadded::new(Condvar::new()),
-            notEmptyCondition: CachePadded::new(Condvar::new()),
-            emptyCondition: CachePadded::new(Condvar::new()),
-            aProducerIsWaiting: CachePadded::new(AtomicBool::new(false)),
-            aConsumerIsWaiting: CachePadded::new(AtomicBool::new(false))
-        }
+            nonBlockingQueue: nonBlockingQueue,
+            maxSize: initialConsumerCount * producerCount * 1000,
+            size: AtomicUsize::new(0),
+            notFullMutex: Mutex::new(false),
+            notEmptyMutex: Mutex::new(false),
+            emptyMutex: Mutex::new(false),
+            notFullCondition: Condvar::new(),
+            notEmptyCondition: Condvar::new(),
+            emptyCondition: Condvar::new(),
+            aProducerIsWaiting: AtomicBool::new(false),
+            aConsumerIsWaiting: AtomicBool::new(false)
+        };
+        ret.nonBlockingQueue.setSizeParameters(producerCount, ret.maxSize);
+        ret
     }
 }
 
-impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E, NBQ>
+impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
 {
     fn addPortion(&self, mut portion: E)
     {

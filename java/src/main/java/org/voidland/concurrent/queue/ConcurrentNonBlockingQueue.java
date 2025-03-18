@@ -9,7 +9,7 @@ public class ConcurrentNonBlockingQueue<E>
 	private ConcurrentLinkedQueue<E> queue;
 	
 	
-	public ConcurrentNonBlockingQueue(int maxSize)
+	public ConcurrentNonBlockingQueue()
 	{
 		this.queue = new ConcurrentLinkedQueue<>();
 	}
