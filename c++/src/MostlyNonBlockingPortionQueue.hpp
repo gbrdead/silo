@@ -18,9 +18,6 @@ namespace org::voidland::concurrent::queue
 {
 
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winterference-size"
-
 template <typename E, typename NBQ>
 class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
@@ -29,20 +26,20 @@ class MostlyNonBlockingPortionQueue :
 	static_assert(std::is_constructible<NBQ, std::size_t>::value);
 
 private:
-	alignas(std::hardware_destructive_interference_size) NBQ nonBlockingQueue;
-	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
+	std::unique_ptr<NBQ> nonBlockingQueue;
+	std::atomic<std::size_t> size;
 
-    alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
+    std::mutex notFullMutex;
     std::condition_variable notFullCondition;
-    alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
+    std::mutex notEmptyMutex;
     std::condition_variable notEmptyCondition;
-    alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
+    std::mutex emptyMutex;
     std::condition_variable emptyCondition;
 
-	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
-	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aConsumerIsWaiting;
+	std::atomic<bool> aProducerIsWaiting;
+	std::atomic<bool> aConsumerIsWaiting;
 
-	alignas(std::hardware_destructive_interference_size) std::size_t maxSize;
+	std::size_t maxSize;
     bool workDone;
 
 public:
@@ -56,8 +53,6 @@ public:
     std::size_t getSize();
     std::size_t getMaxSize();
 };
-
-#pragma GCC diagnostic pop
 
 
 template <typename E>
@@ -73,7 +68,7 @@ using OneTBB_BlownQueue = MostlyNonBlockingPortionQueue<E, OneTBB_PortionQueue<E
 template <typename E, typename NBQ>
 MostlyNonBlockingPortionQueue<E, NBQ>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
-	nonBlockingQueue(this->maxSize),
+	nonBlockingQueue(new NBQ(this->maxSize)),
     size(0),
     workDone(false),
     notFullMutex(),
@@ -110,7 +105,7 @@ void MostlyNonBlockingPortionQueue<E, NBQ>::addPortion(E&& portion)
             }
         }
 
-        if (this->nonBlockingQueue.tryEnqueue(std::move(portion)))
+        if (this->nonBlockingQueue->tryEnqueue(std::move(portion)))
         {
         	break;
         }
@@ -130,7 +125,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E, NBQ>::retrievePortion()
 {
     E portion;
 
-    if (!this->nonBlockingQueue.tryDequeue(portion))
+    if (!this->nonBlockingQueue->tryDequeue(portion))
     {
         std::unique_lock lock(this->notEmptyMutex);
         while (true)
@@ -140,7 +135,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E, NBQ>::retrievePortion()
                 return std::nullopt;
             }
 
-        	if (this->nonBlockingQueue.tryDequeue(portion))
+        	if (this->nonBlockingQueue->tryDequeue(portion))
         	{
         		break;
         	}
