@@ -13,13 +13,13 @@
 #include <new>
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+
 
 namespace org::voidland::concurrent::queue
 {
 
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winterference-size"
 
 template <typename E, typename NBQ>
 class MostlyNonBlockingPortionQueue :
@@ -39,8 +39,9 @@ private:
 	std::atomic<bool> aProducerIsWaiting;
 	std::atomic<bool> aConsumerIsWaiting;
 
-	alignas(std::hardware_destructive_interference_size) std::unique_ptr<NBQ> nonBlockingQueue;
-	std::size_t maxSize;
+	alignas(std::hardware_destructive_interference_size) NBQ nonBlockingQueue;
+
+	alignas(std::hardware_destructive_interference_size) std::size_t maxSize;
     bool workDone;
 
 public:
@@ -54,8 +55,6 @@ public:
     std::size_t getSize();
     std::size_t getMaxSize();
 };
-
-#pragma GCC diagnostic pop
 
 
 template <typename E>
@@ -71,7 +70,7 @@ using OneTBB_BlownQueue = MostlyNonBlockingPortionQueue<E, OneTBB_PortionQueue<E
 template <typename E, typename NBQ>
 MostlyNonBlockingPortionQueue<E, NBQ>::MostlyNonBlockingPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
     maxSize(initialConsumerCount * producerCount * 1000),
-	nonBlockingQueue(new NBQ(this->maxSize)),
+	nonBlockingQueue(this->maxSize),
     size(0),
     workDone(false),
     notFullMutex(),
@@ -108,7 +107,7 @@ void MostlyNonBlockingPortionQueue<E, NBQ>::addPortion(E&& portion)
             }
         }
 
-        if (this->nonBlockingQueue->tryEnqueue(std::move(portion)))
+        if (this->nonBlockingQueue.tryEnqueue(std::move(portion)))
         {
         	break;
         }
@@ -128,7 +127,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E, NBQ>::retrievePortion()
 {
     E portion;
 
-    if (!this->nonBlockingQueue->tryDequeue(portion))
+    if (!this->nonBlockingQueue.tryDequeue(portion))
     {
         std::unique_lock lock(this->notEmptyMutex);
         while (true)
@@ -138,7 +137,7 @@ std::optional<E> MostlyNonBlockingPortionQueue<E, NBQ>::retrievePortion()
                 return std::nullopt;
             }
 
-        	if (this->nonBlockingQueue->tryDequeue(portion))
+        	if (this->nonBlockingQueue.tryDequeue(portion))
         	{
         		break;
         	}
@@ -204,5 +203,8 @@ std::size_t MostlyNonBlockingPortionQueue<E, NBQ>::getMaxSize()
 
 
 }
+
+
+#pragma GCC diagnostic pop
 
 #endif
