@@ -47,7 +47,7 @@ public:
 
 template <typename E>
 ConcurrentPortionQueue<E>::ConcurrentPortionQueue(std::size_t maxSize) :
-	queue(new moodycamel::ConcurrentQueue<E>())
+	queue(new moodycamel::ConcurrentQueue<E>(maxSize))
 {
 }
 
