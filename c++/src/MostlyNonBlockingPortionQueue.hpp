@@ -25,18 +25,14 @@ class MostlyNonBlockingPortionQueue :
 {
 private:
 	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
-
-	alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
+	std::mutex notFullMutex;
     std::condition_variable notFullCondition;
-
-    alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
+    std::mutex notEmptyMutex;
     std::condition_variable notEmptyCondition;
-
-    alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
+    std::mutex emptyMutex;
     std::condition_variable emptyCondition;
-
-    alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
-    alignas(std::hardware_destructive_interference_size) std::atomic<bool> aConsumerIsWaiting;
+    std::atomic<bool> aProducerIsWaiting;
+    std::atomic<bool> aConsumerIsWaiting;
 
 	alignas(std::hardware_destructive_interference_size) std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
 	std::size_t maxSize;
