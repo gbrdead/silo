@@ -9,37 +9,45 @@
 #include <condition_variable>
 #include <utility>
 #include <memory>
-#include <type_traits>
-
+#include <new>
 
 
 namespace org::voidland::concurrent::queue
 {
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+
 template <typename E>
 class MostlyNonBlockingPortionQueue :
     public MPMC_PortionQueue<E>
 {
 private:
-	std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
+	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
 
-    std::size_t maxSize;
-    std::atomic<std::size_t> size;
-
-    bool workDone;
-
-    std::mutex notFullMutex;
-    std::mutex notEmptyMutex;
-    std::mutex emptyMutex;
+	alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
     std::condition_variable notFullCondition;
+
+    alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
     std::condition_variable notEmptyCondition;
+
+    alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
     std::condition_variable emptyCondition;
 
-    std::atomic<bool> aProducerIsWaiting;
-    std::atomic<bool> aConsumerIsWaiting;
+    alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
+    alignas(std::hardware_destructive_interference_size) std::atomic<bool> aConsumerIsWaiting;
+
+	alignas(std::hardware_destructive_interference_size) std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
+	std::size_t maxSize;
+    bool workDone;
 
 public:
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createConcurrentBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createAtomicBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createLockfreeBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createOneTBB_BlownQueue(std::size_t maxSize);
+
     MostlyNonBlockingPortionQueue(std::size_t maxSize, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue);
 
     void addPortion(const E& portion);
@@ -50,6 +58,37 @@ public:
     std::size_t getSize();
     std::size_t getMaxSize();
 };
+
+#pragma GCC diagnostic pop
+
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createConcurrentBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<ConcurrentPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createAtomicBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<AtomicPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createLockfreeBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<LockfreePortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createOneTBB_BlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<OneTBB_PortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
 
 
 template <typename E>
