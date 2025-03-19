@@ -9,7 +9,7 @@ namespace org::voidland::concurrent::queue
 {
 
 
-template <class E>
+template <typename E>
 class MPMC_PortionQueue
 {
 public:
@@ -28,7 +28,7 @@ public:
     virtual std::size_t getMaxSize() = 0;
 };
 
-template <class E>
+template <typename E>
 MPMC_PortionQueue<E>::~MPMC_PortionQueue()
 {
 }
