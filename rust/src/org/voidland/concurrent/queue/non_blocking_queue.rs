@@ -9,10 +9,6 @@ use std::sync::mpmc::Receiver;
 
 pub trait NonBlockingQueue<E> : Send + Sync
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, _maxSize: usize)
-    {
-    }
-
     fn tryEnqueue(&self, portion: E) -> Result<(), E>;
     fn tryDequeue(&self) -> Option<E>;
 }
@@ -21,30 +17,25 @@ pub trait NonBlockingQueue<E> : Send + Sync
 
 pub struct ConcurrentPortionQueue<E>
 {
-    queue: Option<ConcurrentQueue<E>>
+    queue: ConcurrentQueue<E>
 }
 
 impl<E> ConcurrentPortionQueue<E>
 {
-    pub fn new() -> Self
+    pub fn new(maxSize: usize) -> Self
     {
         Self
         {
-            queue: None
+            queue: ConcurrentQueue::<E>::bounded(maxSize)
         }
     }
 }
 
 impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, maxSize: usize)
-    {
-        self.queue = Some(ConcurrentQueue::<E>::bounded(maxSize));
-    }
-
     fn tryEnqueue(&self, portion: E) -> Result<(), E>
     {
-        match self.queue.as_ref().unwrap().push(portion)
+        match self.queue.push(portion)
         {
             Ok(_) => Ok(()),
             Err(error) => Err(error.into_inner())
@@ -53,7 +44,7 @@ impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
     
     fn tryDequeue(&self) -> Option<E>
     {
-        match self.queue.as_ref().unwrap().pop()
+        match self.queue.pop()
         {
             Ok(portion) => Some(portion),
             Err(_) => None
@@ -63,15 +54,15 @@ impl<E: Send + Sync> NonBlockingQueue<E> for ConcurrentPortionQueue<E>
 
 
 
-pub struct AsyncMpmcPortionQueue<E>
+pub struct AsyncMPMC_PortionQueue<E>
 {
     sender: Sender<E>,
     receiver: Receiver<E>
 }
 
-impl<E> AsyncMpmcPortionQueue<E>
+impl<E> AsyncMPMC_PortionQueue<E>
 {
-    pub fn new() -> Self
+    pub fn new(_maxSize: usize) -> Self
     {
         let (sender, receiver): (Sender<E>, Receiver<E>) = channel::<E>();
         Self
@@ -82,12 +73,8 @@ impl<E> AsyncMpmcPortionQueue<E>
     }
 }
 
-impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMpmcPortionQueue<E>
+impl<E: Send + Sync> NonBlockingQueue<E> for AsyncMPMC_PortionQueue<E>
 {
-    fn setSizeParameters(&mut self, _producerCount: usize, _maxSize: usize)
-    {
-    }
-
     fn tryEnqueue(&self, portion: E) -> Result<(), E>
     {
         let _ = self.sender.send(portion);

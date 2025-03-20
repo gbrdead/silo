@@ -22,9 +22,9 @@ public class TextbookPortionQueue<E>
 	private Condition notFullCondition;
 	
 	
-	public TextbookPortionQueue(int initialConsumerCount, int producerCount)
+	public TextbookPortionQueue(int maxSize)
 	{
-		this.maxSize = initialConsumerCount * producerCount * 1000;
+		this.maxSize = maxSize;
 		
 		this.queue = new ArrayDeque<>(this.maxSize);
 		this.workDone = false;

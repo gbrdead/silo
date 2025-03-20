@@ -93,18 +93,18 @@ std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<
 
 template <typename E>
 MostlyNonBlockingPortionQueue<E>::MostlyNonBlockingPortionQueue(std::size_t maxSize, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue) :
+	size(0),
     maxSize(maxSize),
-	nonBlockingQueue(std::move(nonBlockingQueue)),
-    size(0),
-    workDone(false),
     notFullMutex(),
+	notFullCondition(),
     notEmptyMutex(),
+	notEmptyCondition(),
     emptyMutex(),
-    notFullCondition(),
-    notEmptyCondition(),
     emptyCondition(),
 	aProducerIsWaiting(false),
-	aConsumerIsWaiting(false)
+	aConsumerIsWaiting(false),
+	nonBlockingQueue(std::move(nonBlockingQueue)),
+    workDone(false)
 {
 }
 

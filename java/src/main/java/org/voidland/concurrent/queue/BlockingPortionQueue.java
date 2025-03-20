@@ -12,9 +12,9 @@ public class BlockingPortionQueue<E>
 	private BlockingQueue<E> queue;
 	
 	
-	public BlockingPortionQueue(int initialConsumerCount, int producerCount)
+	public BlockingPortionQueue(int maxSize)
 	{
-	    this.maxSize = initialConsumerCount * producerCount * 1000;
+	    this.maxSize = maxSize;
 		this.queue = new ArrayBlockingQueue<>(this.maxSize);
 	}
 	
