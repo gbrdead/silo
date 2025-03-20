@@ -26,19 +26,17 @@ class MostlyNonBlockingPortionQueue :
 private:
 	alignas(std::hardware_destructive_interference_size) std::atomic<std::size_t> size;
 	std::size_t maxSize;
+	std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
 
 	alignas(std::hardware_destructive_interference_size) std::mutex notFullMutex;
-	alignas(std::hardware_destructive_interference_size) std::condition_variable notFullCondition;
-	alignas(std::hardware_destructive_interference_size) std::mutex notEmptyMutex;
-	alignas(std::hardware_destructive_interference_size) std::condition_variable notEmptyCondition;
-	alignas(std::hardware_destructive_interference_size) std::mutex emptyMutex;
-	alignas(std::hardware_destructive_interference_size) std::condition_variable emptyCondition;
-
-	alignas(std::hardware_destructive_interference_size) std::atomic<bool> aProducerIsWaiting;
+	std::condition_variable notFullCondition;
+	std::mutex notEmptyMutex;
+	std::condition_variable notEmptyCondition;
+	std::mutex emptyMutex;
+	std::condition_variable emptyCondition;
+	std::atomic<bool> aProducerIsWaiting;
     std::atomic<bool> aConsumerIsWaiting;
     bool workDone;
-
-    alignas(std::hardware_destructive_interference_size) std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue;
 
 public:
     static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createConcurrentBlownQueue(std::size_t maxSize);
