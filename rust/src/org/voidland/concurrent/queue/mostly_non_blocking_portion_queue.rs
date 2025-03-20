@@ -1,79 +1,105 @@
 use super::MPMC_PortionQueue;
 use super::NonBlockingQueue;
+use super::non_blocking_queue::ConcurrentPortionQueue;
+use super::non_blocking_queue::AsyncMPMC_PortionQueue;
 
-use crossbeam::utils::CachePadded;
-use std::marker::PhantomData;
-use std::marker::Send;
-use std::marker::Sync;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Mutex;
 use std::sync::Condvar;
-
-use super::non_blocking_queue::AsyncMpmcPortionQueue;
-use super::non_blocking_queue::ConcurrentPortionQueue;
-
-pub type AsyncMpmcBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, AsyncMpmcPortionQueue<E>>;
-pub type ConcurrentBlownQueue<E> = MostlyNonBlockingPortionQueue::<E, ConcurrentPortionQueue<E>>;
+use crossbeam::utils::CachePadded;
 
 
-pub struct MostlyNonBlockingPortionQueue<E: Send + Sync, NBQ: NonBlockingQueue<E>>
+struct Size
 {
-    nonBlockingQueue: CachePadded<NBQ>,
-    size: CachePadded<AtomicUsize>,
+    size: AtomicUsize,
+    maxSize: usize
+}
+
+struct MutexCondition<O>
+{
+    mutex: Mutex<O>,
+    condition: Condvar
+}
+
+pub struct MostlyNonBlockingPortionQueue<E>
+{
+    sizes: CachePadded<Size>,
     
-    notFullMutex: CachePadded<Mutex<bool>>,
-    notFullCondition: CachePadded<Condvar>,
-    notEmptyMutex: CachePadded<Mutex<bool>>,
-    notEmptyCondition: CachePadded<Condvar>,
-    emptyMutex: CachePadded<Mutex<bool>>,
-    emptyCondition: CachePadded<Condvar>,
+    notFull: CachePadded<MutexCondition<bool>>,
+    notEmpty: CachePadded<MutexCondition<bool>>,
+    empty: CachePadded<MutexCondition<bool>>,
     
     aProducerIsWaiting: CachePadded<AtomicBool>,
     aConsumerIsWaiting: CachePadded<AtomicBool>,
-
-    maxSize: usize,
     
-    _t: PhantomData<E>
+    nonBlockingQueue: CachePadded<Box<dyn NonBlockingQueue<E>>>
 }
 
-impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MostlyNonBlockingPortionQueue<E, NBQ>
+impl<E: Send + Sync + 'static> MostlyNonBlockingPortionQueue<E>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
+    pub fn createConcurrentBlownQueue(maxSize: usize) -> Self
     {
-        let maxSize: usize = initialConsumerCount * producerCount * 1000;
+        let nonBlockingQueue: Box<dyn NonBlockingQueue<E>> = Box::new(ConcurrentPortionQueue::<E>::new(maxSize));
+        MostlyNonBlockingPortionQueue::new(maxSize, nonBlockingQueue)
+    }
+    
+    pub fn createAsynMPMC_BlownQueue(maxSize: usize) -> Self
+    {
+        let nonBlockingQueue: Box<dyn NonBlockingQueue<E>> = Box::new(AsyncMPMC_PortionQueue::<E>::new(maxSize));
+        MostlyNonBlockingPortionQueue::new(maxSize, nonBlockingQueue)
+    }
+
+    
+    pub fn new(maxSize: usize, nonBlockingQueue: Box<dyn NonBlockingQueue<E>>) -> Self
+    {
         Self
         {
-            _t: PhantomData,
-            nonBlockingQueue: CachePadded::new(NBQ::new(maxSize)),
-            maxSize: maxSize,
-            size: CachePadded::new(AtomicUsize::new(0)),
-            notFullMutex: CachePadded::new(Mutex::new(false)),
-            notEmptyMutex: CachePadded::new(Mutex::new(false)),
-            emptyMutex: CachePadded::new(Mutex::new(false)),
-            notFullCondition: CachePadded::new(Condvar::new()),
-            notEmptyCondition: CachePadded::new(Condvar::new()),
-            emptyCondition: CachePadded::new(Condvar::new()),
+            sizes: CachePadded::new(
+                Size
+                {
+                    size: AtomicUsize::new(0),
+                    maxSize: maxSize
+                }),
+            notFull: CachePadded::new(
+                MutexCondition::<bool>
+                {
+                    mutex: Mutex::new(false),
+                    condition: Condvar::new()
+                }),
+            notEmpty: CachePadded::new(
+                MutexCondition::<bool>
+                {
+                    mutex: Mutex::new(false),
+                    condition: Condvar::new()
+                }),
+            empty: CachePadded::new(
+                MutexCondition::<bool>
+                {
+                    mutex: Mutex::new(false),
+                    condition: Condvar::new()
+                }),
             aProducerIsWaiting: CachePadded::new(AtomicBool::new(false)),
-            aConsumerIsWaiting: CachePadded::new(AtomicBool::new(false))
+            aConsumerIsWaiting: CachePadded::new(AtomicBool::new(false)),
+            nonBlockingQueue: CachePadded::new(nonBlockingQueue)
         }
     }
 }
 
-impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E, NBQ>
+impl<E> MPMC_PortionQueue<E> for MostlyNonBlockingPortionQueue<E>
 {
     fn addPortion(&self, mut portion: E)
     {
         loop
         {
-            if self.size.load(Ordering::Acquire) >= self.maxSize
+            if self.sizes.size.load(Ordering::Acquire) >= self.sizes.maxSize
             {
-                let mut lock = self.notFullMutex.lock().unwrap();
-                while self.size.load(Ordering::Acquire) >= self.maxSize
+                let mut lock = self.notFull.mutex.lock().unwrap();
+                while self.sizes.size.load(Ordering::Acquire) >= self.sizes.maxSize
                 {
                     self.aProducerIsWaiting.store(true, Ordering::Release);
-                    lock = self.notFullCondition.wait(lock).unwrap();
+                    lock = self.notFull.condition.wait(lock).unwrap();
                 }
             }
             
@@ -83,12 +109,12 @@ impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNo
                 Err(error) => portion = error
             }
         }
-        self.size.fetch_add(1, Ordering::Release);
+        self.sizes.size.fetch_add(1, Ordering::Release);
         
         if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
         {
-            let _lock = self.notEmptyMutex.lock().unwrap();
-            self.notEmptyCondition.notify_all();
+            let _lock = self.notEmpty.mutex.lock().unwrap();
+            self.notEmpty.condition.notify_all();
         }
     }
     
@@ -98,7 +124,7 @@ impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNo
         
         if portion.is_none()
         {
-            let mut workDone = self.notEmptyMutex.lock().unwrap();
+            let mut workDone = self.notEmpty.mutex.lock().unwrap();
             loop
             {
                 if *workDone
@@ -113,22 +139,22 @@ impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNo
                 }
                 
                 self.aConsumerIsWaiting.store(true, Ordering::Release);
-                workDone = self.notEmptyCondition.wait(workDone).unwrap();
+                workDone = self.notEmpty.condition.wait(workDone).unwrap();
             }
         }
         
-        let newSize: usize = self.size.fetch_sub(1, Ordering::AcqRel) - 1;
+        let newSize: usize = self.sizes.size.fetch_sub(1, Ordering::AcqRel) - 1;
         
         if self.aProducerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
         {
-            let _lock = self.notFullMutex.lock().unwrap();
-            self.notFullCondition.notify_all();
+            let _lock = self.notFull.mutex.lock().unwrap();
+            self.notFull.condition.notify_all();
         }
         
         if newSize == 0
         {
-            let _lock = self.emptyMutex.lock().unwrap();
-            self.emptyCondition.notify_one();
+            let _lock = self.empty.mutex.lock().unwrap();
+            self.empty.condition.notify_one();
         }
         
         portion
@@ -137,33 +163,33 @@ impl<E: Send + Sync, NBQ: NonBlockingQueue<E>> MPMC_PortionQueue<E> for MostlyNo
     fn ensureAllPortionsAreRetrieved(&self)
     {
         {
-            let _lock = self.notEmptyMutex.lock().unwrap();
-            self.notEmptyCondition.notify_all();
+            let _lock = self.notEmpty.mutex.lock().unwrap();
+            self.notEmpty.condition.notify_all();
         }
 
         {
-            let mut lock = self.emptyMutex.lock().unwrap();
-            while self.size.load(Ordering::Acquire) > 0
+            let mut lock = self.empty.mutex.lock().unwrap();
+            while self.sizes.size.load(Ordering::Acquire) > 0
             {
-                lock = self.emptyCondition.wait(lock).unwrap();
+                lock = self.empty.condition.wait(lock).unwrap();
             }
         }        
     }
     
     fn stopConsumers(&self, _finalConsumerCount: usize)
     {
-        let mut workDone = self.notEmptyMutex.lock().unwrap();
+        let mut workDone = self.notEmpty.mutex.lock().unwrap();
         *workDone = true;
-        self.notEmptyCondition.notify_all();
+        self.notEmpty.condition.notify_all();
     }
     
     fn getSize(&self) -> usize
     {
-        self.size.load(Ordering::Relaxed)
+        self.sizes.size.load(Ordering::Relaxed)
     }
     
     fn getMaxSize(&self) -> usize
     {
-        self.maxSize
+        self.sizes.maxSize
     }
 }

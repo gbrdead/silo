@@ -3,8 +3,8 @@ mod non_blocking_queue;
 mod blocking_portion_queue;
 
 pub use non_blocking_queue::NonBlockingQueue;
-pub use mostly_non_blocking_portion_queue::ConcurrentBlownQueue;
-pub use mostly_non_blocking_portion_queue::AsyncMpmcBlownQueue;
+pub use non_blocking_queue::ConcurrentPortionQueue;
+pub use non_blocking_queue::AsyncMPMC_PortionQueue;
 pub use mostly_non_blocking_portion_queue::MostlyNonBlockingPortionQueue;
 pub use blocking_portion_queue::StdTextbookPortionQueue;
 pub use blocking_portion_queue::ParkingLotTextbookPortionQueue;

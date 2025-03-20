@@ -27,9 +27,8 @@ pub struct StdTextbookPortionQueue<E>
 
 impl<E> StdTextbookPortionQueue<E>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
+    pub fn new(maxSize: usize) -> Self
     {
-        let maxSize: usize = initialConsumerCount * producerCount * 1000;
         Self
         {
             maxSize: maxSize,
@@ -124,9 +123,8 @@ pub struct ParkingLotTextbookPortionQueue<E>
 
 impl<E> ParkingLotTextbookPortionQueue<E>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
+    pub fn new(maxSize: usize) -> Self
     {
-        let maxSize: usize = initialConsumerCount * producerCount * 1000;
         Self
         {
             maxSize: maxSize,
@@ -219,9 +217,8 @@ pub struct SyncMpmcPortionQueue<E>
 
 impl<E> SyncMpmcPortionQueue<E>
 {
-    pub fn new(initialConsumerCount: usize, producerCount: usize) -> Self
+    pub fn new(maxSize: usize) -> Self
     {
-        let maxSize: usize = initialConsumerCount * producerCount * 1000;
         let (sender, receiver): (Sender<Option<E>>, Receiver<Option<E>>) = sync_channel::<Option<E>>(maxSize);
         Self
         {

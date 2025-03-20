@@ -6,8 +6,7 @@
 pub mod org;
 
 use org::voidland::concurrent::VERBOSE;
-use org::voidland::concurrent::queue::ConcurrentBlownQueue;
-use org::voidland::concurrent::queue::AsyncMpmcBlownQueue;
+use org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
 use org::voidland::concurrent::queue::MPMC_PortionQueue;
 use org::voidland::concurrent::queue::StdTextbookPortionQueue;
 use org::voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
@@ -90,46 +89,46 @@ fn main()
         "concurrent" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
-            let producerCount:usize = cpuCount;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(ConcurrentBlownQueue::<Grille>::new(initialConsumerCount, producerCount));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createConcurrentBlownQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "async_mpmc" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
-            let producerCount:usize = cpuCount;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(AsyncMpmcBlownQueue::<Grille>::new(initialConsumerCount, producerCount));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createAsynMPMC_BlownQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
-            let producerCount:usize = cpuCount;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(StdTextbookPortionQueue::new(initialConsumerCount, producerCount));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(StdTextbookPortionQueue::new(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook_pl" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
-            let producerCount:usize = cpuCount;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(ParkingLotTextbookPortionQueue::new(initialConsumerCount, producerCount));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(ParkingLotTextbookPortionQueue::new(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "sync_mpmc" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
-            let producerCount:usize = cpuCount;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> =
-                Arc::new(SyncMpmcPortionQueue::new(initialConsumerCount, producerCount));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(SyncMpmcPortionQueue::new(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "syncless" =>

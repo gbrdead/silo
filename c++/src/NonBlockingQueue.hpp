@@ -30,7 +30,6 @@ NonBlockingQueue<E>::~NonBlockingQueue()
 }
 
 
-
 template <typename E>
 class ConcurrentPortionQueue :
     public NonBlockingQueue<E>
@@ -47,7 +46,7 @@ public:
 
 template <typename E>
 ConcurrentPortionQueue<E>::ConcurrentPortionQueue(std::size_t maxSize) :
-	queue()
+	queue(maxSize)
 {
 }
 
@@ -88,7 +87,8 @@ AtomicPortionQueue<E>::AtomicPortionQueue(std::size_t maxSize) :
 template <typename E>
 bool AtomicPortionQueue<E>::tryEnqueue(E&& portion)
 {
-    return this->queue.try_push(std::move(portion));
+    this->queue.push(std::move(portion));
+    return true;
 }
 
 template <typename E>
@@ -190,7 +190,6 @@ bool OneTBB_PortionQueue<E>::tryDequeue(E& portion)
 {
     return this->queue.try_pop(portion);
 }
-
 
 
 }

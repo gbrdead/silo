@@ -32,7 +32,7 @@ private:
     std::condition_variable notFullCondition;
 
 public:
-    TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
+    TextbookPortionQueue(std::size_t maxSize);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -45,9 +45,9 @@ public:
 
 
 template <typename E>
-TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
+TextbookPortionQueue<E>::TextbookPortionQueue(std::size_t maxSize) :
 	queue(),
-    maxSize(initialConsumerCount * producerCount * 1000),
+    maxSize(maxSize),
     workDone(false),
 	mutex(),
 	notEmptyCondition(),
@@ -146,7 +146,7 @@ private:
     oneapi::tbb::concurrent_bounded_queue<std::optional<E>> queue;
 
 public:
-    OneTBB_BoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
+    OneTBB_BoundedPortionQueue(std::size_t maxSize);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -159,8 +159,8 @@ public:
 
 
 template <typename E>
-OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    maxSize(initialConsumerCount * producerCount * 1000),
+OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t maxSize) :
+    maxSize(maxSize),
 	queue()
 {
     this->queue.set_capacity(this->maxSize);
@@ -227,7 +227,7 @@ private:
     boost::sync_bounded_queue<std::optional<E>> queue;
 
 public:
-    SyncBoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount);
+    SyncBoundedPortionQueue(std::size_t maxSize);
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
@@ -240,9 +240,9 @@ public:
 
 
 template <typename E>
-SyncBoundedPortionQueue<E>::SyncBoundedPortionQueue(std::size_t initialConsumerCount, std::size_t producerCount) :
-    maxSize(initialConsumerCount * producerCount * 1000),
-	queue(this->maxSize)
+SyncBoundedPortionQueue<E>::SyncBoundedPortionQueue(std::size_t maxSize) :
+    maxSize(maxSize),
+	queue(maxSize)
 {
 }
 

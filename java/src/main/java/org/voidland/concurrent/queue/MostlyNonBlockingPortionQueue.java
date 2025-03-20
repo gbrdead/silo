@@ -1,6 +1,5 @@
 package org.voidland.concurrent.queue;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -9,8 +8,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MostlyNonBlockingPortionQueue<E>
         implements MPMC_PortionQueue<E>
 {
-	private NonBlockingQueue<E> nonBlockingQueue;
-	private AtomicInteger size;
+    private AtomicInteger size;
+    private int maxSize;
     
     private Object notFullCondition;
     private Object notEmptyCondition;
@@ -18,20 +17,22 @@ public class MostlyNonBlockingPortionQueue<E>
     
     private AtomicBoolean aProducerIsWaiting;
     private AtomicBoolean aConsumerIsWaiting;
-
-    private int maxSize;
-    private boolean workDone;
-
     
-    @SuppressWarnings("unchecked")
-	public MostlyNonBlockingPortionQueue(int initialConsumerCount, int producerCount, Class<?> nonBlockingQueueClass)
-    		throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException
+    private NonBlockingQueue<E> nonBlockingQueue;
+    private boolean workDone;
+    
+    
+    public static <E> MostlyNonBlockingPortionQueue<E> createConcurrentBlownQueue(int maxSize)
     {
-        this.maxSize = initialConsumerCount * producerCount * 1000;
-        this.nonBlockingQueue = (NonBlockingQueue<E>)nonBlockingQueueClass.getConstructor(int.class).newInstance(this.maxSize);
-        
-        this.size = new AtomicInteger(0);
-        this.workDone = false;
+    	NonBlockingQueue<E> nonBlockingQueue = new ConcurrentNonBlockingQueue<E>(maxSize);
+        return new MostlyNonBlockingPortionQueue<E>(maxSize, nonBlockingQueue);
+    }
+    
+    
+    public MostlyNonBlockingPortionQueue(int maxSize, NonBlockingQueue<E> nonBlockingQueue)
+    {
+    	this.size = new AtomicInteger(0);
+        this.maxSize = maxSize;
         
         this.notFullCondition = new Object();
         this.notEmptyCondition = new Object();
@@ -39,8 +40,9 @@ public class MostlyNonBlockingPortionQueue<E>
 
         this.aProducerIsWaiting = new AtomicBoolean(false);
         this.aConsumerIsWaiting = new AtomicBoolean(false);
-
-        this.nonBlockingQueue.setMaxSize(this.maxSize);
+        
+        this.nonBlockingQueue = nonBlockingQueue;
+        this.workDone = false;
     }
     
     @Override
