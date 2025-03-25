@@ -65,7 +65,7 @@ public class TurningGrilleCrackerProducerConsumer
             
             this.portionQueue.ensureAllPortionsAreRetrieved();
             while (cracker.grilleCountSoFar.get() < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
-            this.portionQueue.stopConsumers(this.consumerThreads);
+            this.portionQueue.stopConsumers(this.consumerThreads.size());
             
             Thread consumerThread;
             while ((consumerThread = this.consumerThreads.poll()) != null)
@@ -180,7 +180,17 @@ public class TurningGrilleCrackerProducerConsumer
                 	{
                 		break;
                 	}
-                	this.portionQueue.addPortion(grille);
+                	while (true)
+                	{
+	                	try
+	                	{
+	                		this.portionQueue.addPortion(grille);
+	                		break;
+	                	}
+	                	catch (InterruptedException e)
+	                	{
+	                	}
+                	}
                 }
             });
             producerThreads.add(producerThread);
@@ -208,7 +218,18 @@ public class TurningGrilleCrackerProducerConsumer
         {
             while (true)
             {
-            	Grille grille = portionQueue.retrievePortion();
+            	Grille grille;
+            	while (true)
+            	{
+            		try
+            		{
+            			grille = portionQueue.retrievePortion();
+            			break;
+            		}
+            		catch (InterruptedException e)
+            		{
+            		}
+            	}
             	if (grille == null)
             	{
             		this.consumerCount.getAndDecrement();

@@ -1,6 +1,6 @@
 package org.voidland.concurrent.queue;
 
-import java.util.Collection;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -9,7 +9,7 @@ public class BlockingPortionQueue<E>
 	implements MPMC_PortionQueue<E>
 {
     private int maxSize;
-	private BlockingQueue<E> queue;
+	private BlockingQueue<Optional<E>> queue;
 	
 	
 	public BlockingPortionQueue(int maxSize)
@@ -20,28 +20,21 @@ public class BlockingPortionQueue<E>
 	
 	@Override
 	public void addPortion(E portion)
+		throws InterruptedException
 	{
-	    try
-	    {
-	        this.queue.put(portion);
-	    }
-	    catch (InterruptedException e)
-	    {
-	        throw new RuntimeException(e);
-	    }
+		if (portion == null)
+		{
+			throw new NullPointerException();
+		}
+		
+		this.queue.put(Optional.of(portion));
 	}
 	
 	@Override
 	public E retrievePortion()
+		throws InterruptedException
 	{
-	    try
-	    {
-	        return this.queue.take();
-	    }
-	    catch (InterruptedException e)
-	    {
-	        return null;
-	    }
+        return this.queue.take().orElse(null);
 	}
 	
     @Override
@@ -60,11 +53,12 @@ public class BlockingPortionQueue<E>
     }
 	
 	@Override
-    public void stopConsumers(Collection<Thread> finalConsumerThreads)
+    public void stopConsumers(int finalConsumerThreadsCount)
+    	throws InterruptedException
 	{
-	    for (Thread consumerThread : finalConsumerThreads)
+	    for (int i = 0; i < finalConsumerThreadsCount; i++)
 	    {
-	        consumerThread.interrupt();
+	    	this.queue.put(Optional.empty());
 	    }
 	}
 	

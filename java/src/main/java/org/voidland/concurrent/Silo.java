@@ -11,8 +11,8 @@ import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.voidland.concurrent.queue.BlockingPortionQueue;
+import org.voidland.concurrent.queue.BlownQueue;
 import org.voidland.concurrent.queue.MPMC_PortionQueue;
-import org.voidland.concurrent.queue.MostlyNonBlockingPortionQueue;
 import org.voidland.concurrent.queue.TextbookPortionQueue;
 import org.voidland.concurrent.turning_grille.Grille;
 import org.voidland.concurrent.turning_grille.TurningGrilleCracker;
@@ -103,7 +103,7 @@ public class Silo
                     int producerCount = cpuCount;
                     int maxQueueSize = initialConsumerCount * producerCount * 1000;
                     
-                    MPMC_PortionQueue<Grille> portionQueue = MostlyNonBlockingPortionQueue.<Grille>createConcurrentBlownQueue(maxQueueSize);
+                    MPMC_PortionQueue<Grille> portionQueue = BlownQueue.<Grille>createConcurrentBlownQueue(maxQueueSize);
                     crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }

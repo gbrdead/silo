@@ -1,7 +1,6 @@
 package org.voidland.concurrent.queue;
 
 import java.util.ArrayDeque;
-import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -35,17 +34,23 @@ public class TextbookPortionQueue<E>
 	}
 	
 	@Override
-    public void addPortion(E work)
+    public void addPortion(E portion)
+    	throws InterruptedException
 	{
+		if (portion == null)
+		{
+			throw new NullPointerException();
+		}
+		
 	    this.mutex.lock();
 	    try
 	    {
 	        while (this.queue.size() >= this.maxSize)
 	        {
-	            this.notFullCondition.awaitUninterruptibly();
+	            this.notFullCondition.await();
 	        }
 
-	        this.queue.add(work);
+	        this.queue.add(portion);
 
 	        this.notEmptyCondition.signal();
 	    }
@@ -57,6 +62,7 @@ public class TextbookPortionQueue<E>
 	
 	@Override
     public E retrievePortion()
+    	throws InterruptedException
 	{
         this.mutex.lock();
         try
@@ -68,7 +74,7 @@ public class TextbookPortionQueue<E>
                     return null;
                 }
 
-                this.notEmptyCondition.awaitUninterruptibly();
+                this.notEmptyCondition.await();
             }
 
             E portion = this.queue.poll();
@@ -85,13 +91,14 @@ public class TextbookPortionQueue<E>
 	
 	@Override
 	public void ensureAllPortionsAreRetrieved()
+		throws InterruptedException
 	{
         this.mutex.lock();
         try
         {
             while (!this.queue.isEmpty())
             {
-                this.notFullCondition.awaitUninterruptibly();
+                this.notFullCondition.await();
             }
         }
         finally
@@ -101,7 +108,7 @@ public class TextbookPortionQueue<E>
 	}
 
 	@Override
-	public void stopConsumers(Collection<Thread> finalConsumerThreads)
+	public void stopConsumers(int finalConsumerThreadsCount)
 	{
         this.mutex.lock();
         try
