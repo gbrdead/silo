@@ -297,7 +297,7 @@ std::vector<std::thread> TurningGrilleCrackerProducerConsumer::startProducerThre
 	producerThreads.reserve(this->producerCount);
 
     uint64_t nextIntervalBegin = 0;
-    uint64_t intervalLength = std::lround((double)cracker.grilleCount / this->producerCount);
+    uint64_t intervalLength = std::ceill((double)cracker.grilleCount / this->producerCount);
     for (unsigned i = 0; i < this->producerCount; i++)
     {
     	std::unique_ptr<GrilleInterval> grilleInterval = std::make_unique<GrilleInterval>(cracker.sideLength / 2, nextIntervalBegin,
@@ -439,7 +439,7 @@ std::vector<std::thread> TurningGrilleCrackerSyncless::startWorkerThreads(Turnin
 	this->grilleIntervalsCompletion.reserve(workerCount);
 
     uint64_t nextIntervalBegin = 0;
-    uint64_t intervalLength = std::lround((double)cracker.grilleCount / workerCount);
+    uint64_t intervalLength = std::ceill((double)cracker.grilleCount / workerCount);
     for (unsigned i = 0; i < workerCount; i++)
     {
     	this->workersCount.fetch_add(std::memory_order_relaxed);

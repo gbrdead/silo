@@ -447,7 +447,7 @@ impl TurningGrilleCrackerProducerConsumer
         let mut producerThreads: Vec<JoinHandle<()>> = Vec::with_capacity(self.producerCount);
         
         let mut nextIntervalBegin: u64 = 0;
-        let intervalLength: u64 = (cracker.grilleCount as f64 / self.producerCount as f64).round() as u64;
+        let intervalLength: u64 = (cracker.grilleCount as f64 / self.producerCount as f64).ceil() as u64;
         for i in 0..self.producerCount
         {
             let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = self.portionQueue.clone();
@@ -647,7 +647,7 @@ impl TurningGrilleCrackerSyncless
         milestoneLock.grilleIntervalsCompletion.reserve_exact(workerCount);
         
         let mut nextIntervalBegin: u64 = 0;
-        let intervalLength: u64 = (cracker.grilleCount as f64 / workerCount as f64).round() as u64;
+        let intervalLength: u64 = (cracker.grilleCount as f64 / workerCount as f64).ceil() as u64;
         for i in 0..workerCount
         {
             self.workersCount.fetch_add(1, Ordering::Relaxed);

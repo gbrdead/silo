@@ -98,7 +98,7 @@ public class TurningGrilleCrackerSyncless
         this.grilleIntervalsCompletion = new ArrayList<>(workerCount);
         
         long nextIntervalBegin = 0;
-        long intervalLength = Math.round((double)cracker.grilleCount / workerCount);
+        long intervalLength = (long)Math.ceil((double)cracker.grilleCount / workerCount);
         for (int i = 0; i < workerCount; i++)
         {
         	this.workersCount.getAndIncrement();

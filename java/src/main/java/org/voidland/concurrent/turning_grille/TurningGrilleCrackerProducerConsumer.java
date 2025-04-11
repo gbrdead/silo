@@ -165,7 +165,7 @@ public class TurningGrilleCrackerProducerConsumer
     	List<Thread> producerThreads = new ArrayList<>(this.producerCount);
     	
         long nextIntervalBegin = 0;
-        long intervalLength = Math.round((double)cracker.grilleCount / this.producerCount);
+        long intervalLength = (long)Math.ceil((double)cracker.grilleCount / this.producerCount);
         for (int i = 0; i < this.producerCount; i++)
         {
             GrilleInterval grilleInterval = new GrilleInterval(cracker.sideLength / 2, nextIntervalBegin,
