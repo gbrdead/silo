@@ -77,7 +77,25 @@ impl<E: Send + Sync + 'static> MostlyNonBlockingPortionQueue<E>
         }
     }
     
-    fn waitOnCondition(cond: &Condvar, lock: &mut Option<MutexGuard<'_, bool>>)
+    fn notifyAllWaitingProducers<'a>(&'a self, lock: &mut Option<MutexGuard<'a, bool>>)
+    {
+        if self.aProducerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
+        {
+            self.lockMutexIfNecessary(lock);
+            self.notFullCondition.notify_all();
+        }        
+    }
+    
+    fn notifyAllWaitingConsumers<'a>(&'a self, lock: &mut Option<MutexGuard<'a, bool>>)
+    {
+        if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
+        {
+            self.lockMutexIfNecessary(lock);
+            self.notEmptyCondition.notify_all();
+        }        
+    }
+
+        fn waitOnCondition(cond: &Condvar, lock: &mut Option<MutexGuard<'_, bool>>)
     {
         let theLock : Option<MutexGuard<'_, bool>> = lock.take();
         let _ = lock.insert(cond.wait(theLock.unwrap()).unwrap());
@@ -96,14 +114,19 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
             {
                 self.lockMutexIfNecessary(&mut lock);
                 
-                while self.sizes.size.load(Ordering::Acquire) >= self.sizes.maxSize
+                loop
                 {
-                    if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
+                    let theOnlyWaitingProducer: bool = self.aProducerIsWaiting.compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed).is_ok();
+                    
+                    if self.sizes.size.load(Ordering::Acquire) < self.sizes.maxSize
                     {
-                        self.notEmptyCondition.notify_all();
+                        if theOnlyWaitingProducer
+                        {
+                            self.aProducerIsWaiting.store(false, Ordering::Release);
+                        }
+                        break;
                     }
-
-                    self.aProducerIsWaiting.store(true, Ordering::Release);
+                    
                     MostlyNonBlockingPortionQueue::<E>::waitOnCondition(&self.notFullCondition, &mut lock);
                 }
             }
@@ -116,11 +139,7 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
         }
         self.sizes.size.fetch_add(1, Ordering::Release);
         
-        if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
-        {
-            self.lockMutexIfNecessary(&mut lock);
-            self.notEmptyCondition.notify_all();
-        }
+        self.notifyAllWaitingConsumers(&mut lock);
     }
     
     fn retrievePortion(&self) -> Option<E>
@@ -131,11 +150,18 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
         if portion.is_none()
         {
             self.lockMutexIfNecessary(&mut lock);
+            
             loop
             {
+                let theOnlyWaitingConsumer: bool = self.aConsumerIsWaiting.compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed).is_ok();
+                
                 portion = self.nonBlockingQueue.tryDequeue();
                 if portion.is_some()
                 {
+                    if theOnlyWaitingConsumer
+                    {
+                        self.aConsumerIsWaiting.store(false, Ordering::Release);
+                    }
                     break;
                 }
 
@@ -145,23 +171,13 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
                     return None;
                 }
                 
-                if self.aProducerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
-                {
-                    self.notFullCondition.notify_all();
-                }
-                
-                self.aConsumerIsWaiting.store(true, Ordering::Release);
                 MostlyNonBlockingPortionQueue::<E>::waitOnCondition(&self.notEmptyCondition, &mut lock);
             }
         }
         
         let newSize: usize = self.sizes.size.fetch_sub(1, Ordering::AcqRel) - 1;
         
-        if self.aProducerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
-        {
-            self.lockMutexIfNecessary(&mut lock);
-            self.notFullCondition.notify_all();
-        }
+        self.notifyAllWaitingProducers(&mut lock);
         
         if newSize == 0
         {

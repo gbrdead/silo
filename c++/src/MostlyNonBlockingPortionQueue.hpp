@@ -65,6 +65,8 @@ public:
 
 private:
     void lockMutexIfNecessary(std::unique_ptr<std::unique_lock<std::mutex>>& lock);
+    void notifyAllWaitingProducers(std::unique_ptr<std::unique_lock<std::mutex>>& lock);
+    void notifyAllWaitingConsumers(std::unique_ptr<std::unique_lock<std::mutex>>& lock);
 };
 
 #pragma GCC diagnostic pop
@@ -175,6 +177,29 @@ inline void MostlyNonBlockingPortionQueue<E>::lockMutexIfNecessary(std::unique_p
 }
 
 template <typename E>
+inline void MostlyNonBlockingPortionQueue<E>::notifyAllWaitingProducers(std::unique_ptr<std::unique_lock<std::mutex>>& lock)
+{
+    bool expected = true;
+    if (this->aProducerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
+		this->lockMutexIfNecessary(lock);
+		this->notFullCondition.notify_all();
+    }
+}
+
+template <typename E>
+inline void MostlyNonBlockingPortionQueue<E>::notifyAllWaitingConsumers(std::unique_ptr<std::unique_lock<std::mutex>>& lock)
+{
+    bool expected = true;
+    if (this->aConsumerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
+		this->lockMutexIfNecessary(lock);
+		this->notEmptyCondition.notify_all();
+    }
+}
+
+
+template <typename E>
 void MostlyNonBlockingPortionQueue<E>::addPortion(const E& portion)
 {
     E portionCopy(portion);
@@ -192,15 +217,20 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
         {
         	this->lockMutexIfNecessary(lock);
 
-            while (this->size.load(std::memory_order_acquire) >= this->maxSize)
+            while (true)
             {
-                bool expected = true;
-                if (this->aConsumerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
-                {
-                    this->notEmptyCondition.notify_all();
-                }
+            	bool expectedProducerIsWaiting = false;
+            	bool theOnlyWaitingProducer = this->aProducerIsWaiting.compare_exchange_strong(expectedProducerIsWaiting, true, std::memory_order_acq_rel, std::memory_order_relaxed);
 
-            	this->aProducerIsWaiting.store(true, std::memory_order_release);
+            	if (this->size.load(std::memory_order_acquire) < this->maxSize)
+            	{
+            		if (theOnlyWaitingProducer)
+            		{
+            			this->aProducerIsWaiting.store(false, std::memory_order_release);
+            		}
+            		break;
+            	}
+
                 this->notFullCondition.wait(*lock);
             }
         }
@@ -212,12 +242,7 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
     }
     this->size.fetch_add(1, std::memory_order_release);
 
-    bool expected = true;
-    if (this->aConsumerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
-    {
-        this->lockMutexIfNecessary(lock);
-        this->notEmptyCondition.notify_all();
-    }
+    this->notifyAllWaitingConsumers(lock);
 }
 
 template <typename E>
@@ -232,8 +257,15 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
 
         while (true)
         {
+        	bool expectedConsumerIsWaiting = false;
+        	bool theOnlyWaitingConsumer = this->aConsumerIsWaiting.compare_exchange_strong(expectedConsumerIsWaiting, true, std::memory_order_acq_rel, std::memory_order_relaxed);
+
         	if (this->nonBlockingQueue->tryDequeue(portion))
         	{
+        		if (theOnlyWaitingConsumer)
+        		{
+        			this->aConsumerIsWaiting.store(false, std::memory_order_release);
+        		}
         		break;
         	}
 
@@ -242,24 +274,12 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
                 return std::nullopt;
             }
 
-            bool expected = true;
-            if (this->aProducerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
-            {
-                this->notFullCondition.notify_all();
-            }
-
-        	this->aConsumerIsWaiting.store(true, std::memory_order_release);
         	this->notEmptyCondition.wait(*lock);
         }
     }
     std::size_t newSize = this->size.fetch_sub(1, std::memory_order_acq_rel) - 1;
 
-    bool expected = true;
-    if (this->aProducerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
-    {
-        this->lockMutexIfNecessary(lock);
-        this->notFullCondition.notify_all();
-    }
+    this->notifyAllWaitingProducers(lock);
 
     if (newSize == 0)
     {
