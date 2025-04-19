@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CPPFLAGS = -I$(srcdir)/ext -I$(srcdir)/ext/atomic_queue/include
+AM_CPPFLAGS = -I$(srcdir)/ext -I$(srcdir)/ext/atomic_queue/include -I$(srcdir)/ext/xenium
 
 
 bin_PROGRAMS = silo

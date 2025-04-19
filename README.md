@@ -75,11 +75,12 @@ Implementations with inherently unstable measurements should not be trusted too 
 
 Test hardware
 
-| CPU name | Base frequency | Cores | Hardware threads (N) | L1 cache | L2 cache | L3 cache | Year purchased |
-|---|---|---|---|---|---|---|---|
-| Intel Core i5-4210M | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 |
-| Intel Core i5-10210U | 1.6 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2020 |
-| AMD Ryzen 7735HS | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2025 |
+| CPU name | Base frequency | Cores | Hardware threads (N) | L1 cache | L2 cache | L3 cache | Year purchased | Computer type |
+|---|---|---|---|---|---|---|---|--|
+| Intel Core i5-4210M | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
+| Intel Core i5-10210U | 1.6 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2020 | low mid-range laptop |
+| AMD Ryzen 3700X | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2020 | high mid-range desktop |
+| AMD Ryzen 7735HS | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2025 | high mid-range laptop |
 
 All the CPUs are set to run constantly at their base frequency for the duration of the test.
 

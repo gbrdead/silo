@@ -4,3 +4,6 @@
 [submodule "c++/ext/concurrentqueue"]
 	path = c++/ext/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "c++/ext/xenium"]
+	path = c++/ext/xenium
+	url = https://github.com/mpoeter/xenium.git

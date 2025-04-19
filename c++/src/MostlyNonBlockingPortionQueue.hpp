@@ -10,6 +10,7 @@
 #include <utility>
 #include <memory>
 #include <new>
+#include <cmath>
 
 
 namespace org::voidland::concurrent::queue
@@ -44,6 +45,13 @@ public:
     static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createAtomicBlownQueue(std::size_t maxSize);
     static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createLockfreeBlownQueue(std::size_t maxSize);
     static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createOneTBB_BlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createMichaelScottBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createRamalheteBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createVyukovBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createKirsch1FifoBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createKirschBounded1FifoBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createNikolaevBlownQueue(std::size_t maxSize);
+    static std::unique_ptr<MostlyNonBlockingPortionQueue<E>> createNikolaevBoundedBlownQueue(std::size_t maxSize);
 
     MostlyNonBlockingPortionQueue(std::size_t maxSize, std::unique_ptr<NonBlockingQueue<E>> nonBlockingQueue);
 
@@ -87,6 +95,57 @@ template <typename E>
 std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createOneTBB_BlownQueue(std::size_t maxSize)
 {
     std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<OneTBB_PortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createMichaelScottBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<MichaelScottPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createRamalheteBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<RamalhetePortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createVyukovBlownQueue(std::size_t maxSize)
+{
+	maxSize = 1 << (unsigned)std::floorl(std::log2l(maxSize));
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<VyukovPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createKirsch1FifoBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<Kirsch1FifoPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createKirschBounded1FifoBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<KirschBounded1FifoPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createNikolaevBlownQueue(std::size_t maxSize)
+{
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<NikolaevPortionQueue<E>>(maxSize);
+	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
+}
+
+template <typename E>
+std::unique_ptr<MostlyNonBlockingPortionQueue<E>> MostlyNonBlockingPortionQueue<E>::createNikolaevBoundedBlownQueue(std::size_t maxSize)
+{
+	maxSize = 1 << (unsigned)std::floorl(std::log2l(maxSize));
+    std::unique_ptr<queue::NonBlockingQueue<E>> nonBlockingQueue = std::make_unique<NikolaevBoundedPortionQueue<E>>(maxSize);
 	return std::make_unique<MostlyNonBlockingPortionQueue<E>>(maxSize, std::move(nonBlockingQueue));
 }
 

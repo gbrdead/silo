@@ -13,30 +13,30 @@ namespace org::voidland::concurrent::turning_grille
 
 class Grille
 {
-private:
+public:
     unsigned halfSideLength;
     std::vector<uint8_t> holes;
 
 public:
-    Grille();
-    Grille(unsigned halfSideLength, uint64_t ordinal);
-    Grille(const Grille& other);
-    Grille(Grille&& other);
+    Grille() noexcept;
+    Grille(unsigned halfSideLength, uint64_t ordinal) noexcept;
+    Grille(const Grille& other) noexcept;
+    Grille(Grille&& other) noexcept;
 
-    Grille& operator=(const Grille& other);
-    Grille& operator=(Grille&& other);
+    Grille& operator=(const Grille& other) noexcept;
+    Grille& operator=(Grille&& other) noexcept;
 
-    Grille& operator++();
+    Grille& operator++() noexcept;
 
     bool isHole(unsigned x, unsigned y, unsigned rotation) const;
 };
 
-inline Grille::Grille() :
+inline Grille::Grille() noexcept :
     halfSideLength(0)
 {
 }
 
-inline Grille::Grille(unsigned halfSideLength, uint64_t ordinal) :
+inline Grille::Grille(unsigned halfSideLength, uint64_t ordinal) noexcept :
     halfSideLength(halfSideLength),
     holes(halfSideLength * halfSideLength, 0)
 {
@@ -47,27 +47,27 @@ inline Grille::Grille(unsigned halfSideLength, uint64_t ordinal) :
     }
 }
 
-inline Grille::Grille(const Grille& other) :
+inline Grille::Grille(const Grille& other) noexcept :
     halfSideLength(other.halfSideLength),
     holes(other.holes)
 {
 }
 
-inline Grille::Grille(Grille&& other) :
+inline Grille::Grille(Grille&& other) noexcept :
     halfSideLength(other.halfSideLength),
     holes(std::move(other.holes))
 {
     other.halfSideLength = 0;
 }
 
-inline Grille& Grille::operator=(const Grille& other)
+inline Grille& Grille::operator=(const Grille& other) noexcept
 {
     this->halfSideLength = other.halfSideLength;
     this->holes = other.holes;
     return *this;
 }
 
-inline Grille& Grille::operator=(Grille&& other)
+inline Grille& Grille::operator=(Grille&& other) noexcept
 {
     this->halfSideLength = other.halfSideLength;
     other.halfSideLength = 0;
@@ -75,7 +75,7 @@ inline Grille& Grille::operator=(Grille&& other)
     return *this;
 }
 
-inline Grille& Grille::operator++()
+inline Grille& Grille::operator++() noexcept
 {
 	for (uint8_t& hole : this->holes)
     {

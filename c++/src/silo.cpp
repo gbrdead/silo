@@ -128,6 +128,76 @@ int main(int argc, char *argv[])
             		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createOneTBB_BlownQueue(maxQueueSize);
             crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
         }
+        else if (arg == "michael_scott")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createMichaelScottBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "ramalhete")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createRamalheteBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "vyukov")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createVyukovBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "kirsch_1fifo")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createKirsch1FifoBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "kirsch_bounded_1fifo")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createKirschBounded1FifoBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "nikolaev")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createNikolaevBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
+        else if (arg == "nikolaev_bounded")
+        {
+            unsigned initialConsumerCount = cpuCount * 3;
+            unsigned producerCount = cpuCount;
+            std::size_t maxQueueSize = initialConsumerCount * producerCount * 1000;
+
+            std::unique_ptr<queue::MPMC_PortionQueue<turning_grille::Grille>> portionQueue =
+            		queue::MostlyNonBlockingPortionQueue<turning_grille::Grille>::createNikolaevBoundedBlownQueue(maxQueueSize);
+            crackerImplDetails = std::make_unique<turning_grille::TurningGrilleCrackerProducerConsumer>(initialConsumerCount, producerCount, std::move(portionQueue));
+        }
         else if (arg == "onetbb_bounded")
         {
             unsigned initialConsumerCount = cpuCount * 3;
