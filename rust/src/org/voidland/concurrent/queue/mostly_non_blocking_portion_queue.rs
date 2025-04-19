@@ -96,14 +96,24 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
             {
                 self.lockMutexIfNecessary(&mut lock);
                 
-                while self.sizes.size.load(Ordering::Acquire) >= self.sizes.maxSize
+                loop
                 {
+                    let theOnlyWaitingProducer: bool = self.aProducerIsWaiting.compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed).is_ok();
+                    
+                    if self.sizes.size.load(Ordering::Acquire) < self.sizes.maxSize
+                    {
+                        if theOnlyWaitingProducer
+                        {
+                            self.aProducerIsWaiting.store(false, Ordering::Release);
+                        }
+                        break;
+                    }
+                    
                     if self.aConsumerIsWaiting.compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed).is_ok()
                     {
                         self.notEmptyCondition.notify_all();
                     }
 
-                    self.aProducerIsWaiting.store(true, Ordering::Release);
                     MostlyNonBlockingPortionQueue::<E>::waitOnCondition(&self.notFullCondition, &mut lock);
                 }
             }
@@ -131,11 +141,18 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
         if portion.is_none()
         {
             self.lockMutexIfNecessary(&mut lock);
+            
             loop
             {
+                let theOnlyWaitingConsumer: bool = self.aConsumerIsWaiting.compare_exchange(false, true, Ordering::AcqRel, Ordering::Relaxed).is_ok();
+                
                 portion = self.nonBlockingQueue.tryDequeue();
                 if portion.is_some()
                 {
+                    if theOnlyWaitingConsumer
+                    {
+                        self.aConsumerIsWaiting.store(false, Ordering::Release);
+                    }
                     break;
                 }
 
@@ -150,7 +167,6 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
                     self.notFullCondition.notify_all();
                 }
                 
-                self.aConsumerIsWaiting.store(true, Ordering::Release);
                 MostlyNonBlockingPortionQueue::<E>::waitOnCondition(&self.notEmptyCondition, &mut lock);
             }
         }

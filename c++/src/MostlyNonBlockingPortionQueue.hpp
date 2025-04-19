@@ -192,15 +192,26 @@ void MostlyNonBlockingPortionQueue<E>::addPortion(E&& portion)
         {
         	this->lockMutexIfNecessary(lock);
 
-            while (this->size.load(std::memory_order_acquire) >= this->maxSize)
+            while (true)
             {
-                bool expected = true;
-                if (this->aConsumerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
+            	bool expectedProducerIsWaiting = false;
+            	bool theOnlyWaitingProducer = this->aProducerIsWaiting.compare_exchange_strong(expectedProducerIsWaiting, true, std::memory_order_acq_rel, std::memory_order_relaxed);
+
+            	if (this->size.load(std::memory_order_acquire) < this->maxSize)
+            	{
+            		if (theOnlyWaitingProducer)
+            		{
+            			this->aProducerIsWaiting.store(false, std::memory_order_release);
+            		}
+            		break;
+            	}
+
+                bool expectedConsumerIsWaiting = true;
+                if (this->aConsumerIsWaiting.compare_exchange_strong(expectedConsumerIsWaiting, false, std::memory_order_acq_rel, std::memory_order_relaxed))
                 {
                     this->notEmptyCondition.notify_all();
                 }
 
-            	this->aProducerIsWaiting.store(true, std::memory_order_release);
                 this->notFullCondition.wait(*lock);
             }
         }
@@ -232,8 +243,15 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
 
         while (true)
         {
+        	bool expectedConsumerIsWaiting = false;
+        	bool theOnlyWaitingConsumer = this->aConsumerIsWaiting.compare_exchange_strong(expectedConsumerIsWaiting, true, std::memory_order_acq_rel, std::memory_order_relaxed);
+
         	if (this->nonBlockingQueue->tryDequeue(portion))
         	{
+        		if (theOnlyWaitingConsumer)
+        		{
+        			this->aConsumerIsWaiting.store(false, std::memory_order_release);
+        		}
         		break;
         	}
 
@@ -242,13 +260,12 @@ std::optional<E> MostlyNonBlockingPortionQueue<E>::retrievePortion()
                 return std::nullopt;
             }
 
-            bool expected = true;
-            if (this->aProducerIsWaiting.compare_exchange_strong(expected, false, std::memory_order_acq_rel, std::memory_order_relaxed))
+            bool expectedProducerIsWaiting = true;
+            if (this->aProducerIsWaiting.compare_exchange_strong(expectedProducerIsWaiting, false, std::memory_order_acq_rel, std::memory_order_relaxed))
             {
                 this->notFullCondition.notify_all();
             }
 
-        	this->aConsumerIsWaiting.store(true, std::memory_order_release);
         	this->notEmptyCondition.wait(*lock);
         }
     }
