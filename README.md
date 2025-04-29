@@ -60,7 +60,7 @@ Running a reference test with the environment variable `VERBOSE` set to `true` w
 
 - The `textbook` and `syncless` implementations in the different languages are 100% equivalent and can be used for inter-runtime comparisons.
 - The best mostly non-blocking implementations can also be used for inter-runtime comparisons.
-- The `serial` implementations can be used for single-threaded comparisons.
+- The `serial` implementations can be used for single-threaded (i.e. single-core) comparisons.
 
 ### Unstable measurements
 
@@ -82,7 +82,8 @@ Test hardware
 | AMD Ryzen 3700X | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2020 | high mid-range desktop |
 | AMD Ryzen 7735HS | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2025 | high mid-range laptop |
 
-All the CPUs are set to run constantly at their base frequency for the duration of the test.
+All the CPUs are set to run constantly at their base frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.  
+Remark: The Intel Core i5-10210U base frequency is artificially low. This CPU can operate at boosted frequency indefinitely. De facto, it performs much better than what the tests here show.
 
 ---
 
@@ -90,43 +91,53 @@ Intel Core i5-4210M
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 863 | 741 | 684 |
-| **Rust/native** | 719 | 639 | ~~334~~ |
-| **Java/JVM** | ~~433~~ | 402 | 352 |
+| **C++/native** | 989 | 851 | ~~720~~ |
+| **Rust/native** | 873 | 732 | 380 |
+| **Java/JVM** | ~~510~~ | 481 | ~~409~~ |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 1661 | 1409 | 1110 |
-| **Rust/native** | 1278 | 1147 | ~~639~~ |
-| **Java/JVM** | ~~945~~ | 855 | 655 |
+| **C++/native** | 1061 | 871 |  ~~404~~ |
+| **Rust/native** | 962 | 777 | 415 |
+| **Java/JVM** | ~~630~~ | 561 | ~~384~~ |
+
+AMD Ryzen 3700X
+
+| runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
+|---|---|---|---|
+| **C++/native** | 4689 | 3367 | ~~1094~~ |
+| **Rust/native** | 4247 | 3008 | 700 |
+| **Java/JVM** | ~~2161~~ | 2201 | ~~814~~ |
 
 AMD Ryzen 7735HS
 
 | runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 4682 | 3551 | 1769 |
-| **Rust/native** | 3762 | 2939 | ~~725~~ |
-| **Java/JVM** | ~~2067~~ | 1671 | 863 |
+| **C++/native** | 4615 | 3576 | ~~1248~~ |
+| **Rust/native** | 4007 | 2821 | 752 |
+| **Java/JVM** | ~~2113~~ | 1943 | ~~862~~ |
 
 `serial` (single-threaded)
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
-| Intel Core i5-4210M | 393 | 338 | 240 |
-| Intel Core i5-10210U | 534 | 399 | 273 |
-| AMD Ryzen 7735HS | 854 | 664 | 541 |
+| Intel Core i5-4210M | 386 | 318 | 240 |
+| Intel Core i5-10210U | 243 | 201 | 155 |
+| AMD Ryzen 3700X | 520 | 449 | 358 |
+| AMD Ryzen 7735HS | 595 | 484 | 390 |
 
 ---
 
 General results:
-- C++ is about 25% more performant than Rust.
+- C++ is 15-25% more performant than Rust.
 - C++ is about 2 times more performant than Java.
-- Non-blocking queues perform much better than blocking ones.
+- Non-blocking queues perform better than blocking ones, even at low hardware parallelism.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
 - The more the CPUs, the less viable is a blocking algorithm, especially with Rust and Java.
 - Single-core CPU improvements are still happenning, although not on a 1990-ies scale.
+- The CPU frequency still matters.
 
 Conclusions:
 - If you want an algorithm to take advantage of new CPUs it better be parallelized.

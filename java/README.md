@@ -15,7 +15,7 @@ The resulting JAR is `target/silo-*.jar`.
 
 | Implementation | Queue type | Non-blocking | Stable measurements |
 |---|---|---|---|
-| `concurrent` | [ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html) | mostly | yes |
+| `concurrent` | [ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html) | mostly (wrapped by `blown_queue`) | yes |
 | `textbook` | a simple blocking bounded queue using only Java SE (ArrayDeque, ReentrantLock and Condition) | no | yes |
 | `blocking` | [ArrayBlockingQueue](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/ArrayBlockingQueue.html) | no | yes |
 | `syncless` | queueless, with no synchronization overhead | yes | no |
@@ -23,29 +23,30 @@ The resulting JAR is `target/silo-*.jar`.
 
 ## Test results
 
-| Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|
-| `concurrent` | 402 | 855 | 1671 |
-| `textbook` | 352 | 655 | 863 |
-| `blocking` | 352 | 689 | 1224 |
-| `syncless` | ~~433~~ | ~~945~~ | ~~2067~~ |
-| `serial` | 240 | 273 | 541 |
+| Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|
+| concurrent | 481 | 561 | 2201 | 1943 |
+| textbook | ~~409~~ | ~~384~~ | ~~814~~ | ~~862~~ |
+| blocking | 366 | 426 | 969 | 1249 |
+| syncless | ~~510~~ | ~~630~~ | ~~2161~~ | ~~2113~~ |
+| serial | 240 | 155 | 358 | 390 |
 
 ---  
 
-Intel Core i5-10210U
+AMD Ryzen 7735HS
 
 | Implementation / JVM  version | 8 | 11 | 17 | 21 |
 |---|---|---|---|---|
-| `concurrent` | 2021 | 2012 | 1867 | 1671 |
-| `textbook` | 960 | 942 | 862 | 863 |
-| `blocking` | 994 | 977 | 1106 | 1224 |
-| `syncless` | ~~2319~~ | ~~2267~~ | ~~1786~~ | ~~2067~~ |
-| `serial` | 547 | 514 | 518 | 541 |
+| concurrent | 2046 | 2051 | 2125 | 1943 |
+| textbook | ~~922~~ | ~~897~~ | ~~1034~~ | ~~862~~ |
+| blocking | 897 | 814 | 1159 | 1249 |
+| syncless | ~~2186~~ | ~~2321~~ | ~~2073~~ | ~~2113~~ |
+| serial | 395 | 363 | 372 | 390 |
 
 General results:
 - `concurrent` is the winner among the queues.
 - There are no noticeable performance improvements in the JVM between version 8 and version 21.
+- `blocking` (`ArrayBlockingQueue`) has been improved between JVM 11 and 17.
 
 Some remarks: 
 - The thread scheduler is very unfair (in a random manner). The most privileged thread finishes its job at less than 90% of the total job done. Thus the `syncless` implementation is very far from perfect and its measurements are very unstable. 
