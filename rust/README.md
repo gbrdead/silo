@@ -31,13 +31,13 @@ The resulting executable is `target/release/silo`.
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|---|
-| async_mpmc | 710 | 750 | 3008 | 2821 |
-| concurrent | 732 | 777 | 2843 | 2766 |
+| async_mpmc | 710 | 718 | 3008 | 2821 |
+| concurrent | 732 | 742 | 2843 | 2766 |
 | textbook | 380 | 415 | 700 | 752 |
-| textbook_pl | ~~737~~ | ~~754~~ | ~~620~~ | ~~251~~ |
-| sync_mpmc | 776 | 746 | 2916 | 2625 |
-| syncless | 873 | 962 | 4247 | 4007 |
-| serial | 318 | 201 | 449 | 484 |
+| textbook_pl | ~~712~~ | ~~754~~ | ~~620~~ | ~~253~~ |
+| sync_mpmc | 748 | 746 | 2916 | 2625 |
+| syncless | 873 | 879 | 4247 | 4007 |
+| serial | 326 | 201 | 449 | 484 |
 
 General results:
 - `async_mpmc` is the winner among the queues, with `concurrent` a close second.

@@ -68,8 +68,9 @@ Some of the implementations for a given language/runtime do not yield stable mea
 - A synchronization primitive (mutex) abruptly lowering its throughput at arbitrary moments.
 - Unfair scheduler for the `syncless` implementation - with such a scheduler the more privileged threads finish too early and then the CPUs are not fully utilized for a random amount of time until the less privileged threads finish their work.
 - Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, even when deemed stable, Java's measurements are noticeably less stable than C++' and Rust's ones.
+- High contention on a single mutex. The `textbook` implementations' measurements are inherently unstable, with higher parallelism leading to higher variations. They are deemed sufficiently stable, though.
 
-Implementations with inherently unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
+Implementations with very unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
 
 ### Test results
 
@@ -91,33 +92,33 @@ Intel Core i5-4210M
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 989 | 851 | ~~720~~ |
+| **C++/native** | 989 | 851 | 720 |
 | **Rust/native** | 873 | 732 | 380 |
-| **Java/JVM** | ~~510~~ | 481 | ~~409~~ |
+| **Java/JVM** | ~~510~~ | 481 | 409 |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 1061 | 871 |  ~~404~~ |
-| **Rust/native** | 962 | 777 | 415 |
-| **Java/JVM** | ~~630~~ | 561 | ~~384~~ |
+| **C++/native** | 1061 | 871 |  404 |
+| **Rust/native** | 879 | 742 | 415 |
+| **Java/JVM** | ~~630~~ | 561 | 384 |
 
 AMD Ryzen 3700X
 
 | runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 4689 | 3367 | ~~1094~~ |
+| **C++/native** | 4689 | 3367 | 1094 |
 | **Rust/native** | 4247 | 3008 | 700 |
-| **Java/JVM** | ~~2161~~ | 2201 | ~~814~~ |
+| **Java/JVM** | ~~2161~~ | 2201 | 814 |
 
 AMD Ryzen 7735HS
 
 | runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 4615 | 3576 | ~~1248~~ |
+| **C++/native** | 4615 | 3576 | 1248 |
 | **Rust/native** | 4007 | 2821 | 752 |
-| **Java/JVM** | ~~2113~~ | 1943 | ~~862~~ |
+| **Java/JVM** | ~~2069~~ | 2054 | 862 |
 
 `serial` (single-threaded)
 

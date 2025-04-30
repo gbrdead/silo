@@ -47,7 +47,7 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 | `nikolaev_bounded` | [xenium nikolaev_bounded_queue](https://mpoeter.github.io/xenium/classxenium_1_1nikolaev__bounded__queue.html) | mostly (wrapped by `blown_queue`) | yes |
 | `onetbb` | [oneTBB concurrent_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_queue_cls) | mostly (wrapped by `blown_queue`) | no |
 | `onetbb_bounded` | [oneTBB concurrent_bounded_queue](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onetbb/source/containers/concurrent_bounded_queue_cls) | mostly (on its own) | no |
-| `textbook` | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | no |
+| `textbook` | a simple blocking bounded queue using only the standard C++ library (queue, mutex and condition_variable) | no | yes |
 | `sync_bounded` | [Boost synchronous bounded queue](https://www.boost.org/doc/libs/release/doc/html/thread/sds.html#thread.sds.synchronized_queues.ref.sync_bounded_queue_ref) | no | N/A |
 | `syncless` | queueless, with no synchronization overhead | yes | yes |
 | `serial` | single-threaded | N/A | yes |
@@ -65,9 +65,9 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 | nikolaev_bounded | 829 | 829 | 2823 | 3246 |
 | kirsch_1fifo | 733 | 776 | 1214 | 1690 |
 | kirsch_bounded_1fifo | 806 | 852 | 1504 | 1941 |
-| onetbb | ~~477~~ | ~~435~~ | ~~823~~ | ~~744~~ |
-| onetbb_bounded | ~~372~~ | ~~439~~ | ~~1407~~ | ~~1020~~ |
-| textbook | ~~720~~ | ~~404~~ | ~~1094~~ | ~~1248~~ |
+| onetbb | ~~477~~ | ~~322~~ | ~~823~~ | ~~744~~ |
+| onetbb_bounded | ~~372~~ | ~~444~~ | ~~1407~~ | ~~1020~~ |
+| textbook | 720 | 404 | 1094 | 1248 |
 | syncless | 989 | 1061 | 4689 | 4615 |
 | serial | 386 | 243 | 520 | 595 |
 
