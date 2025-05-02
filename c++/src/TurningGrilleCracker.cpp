@@ -12,14 +12,14 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 
-namespace org::voidland::concurrent
+namespace voidland::concurrent
 {
 
 bool VERBOSE = (std::getenv("VERBOSE") != nullptr) && boost::iequals("true", std::getenv("VERBOSE"));
 
 }
 
-namespace org::voidland::concurrent::turning_grille
+namespace voidland::concurrent::turning_grille
 {
 
 

@@ -5,7 +5,7 @@
 #include <boost/algorithm/string.hpp>
 
 
-namespace org::voidland::concurrent::turning_grille
+namespace voidland::concurrent::turning_grille
 {
 
 

@@ -1,7 +1,7 @@
 #ifndef __VOIDLAND_BLOCKING_WORK_QUEUE_HPP__
 #define __VOIDLAND_BLOCKING_WORK_QUEUE_HPP__
 
-#include "MPMC_PortionQueue.hpp"
+#include <voidland/blown_queue/MPMC_PortionQueue.hpp>
 
 #include <queue>
 #include <mutex>
@@ -12,7 +12,7 @@
 #include <boost/thread/sync_bounded_queue.hpp>
 
 
-namespace org::voidland::concurrent::queue
+namespace voidland::concurrent::queue
 {
 
 

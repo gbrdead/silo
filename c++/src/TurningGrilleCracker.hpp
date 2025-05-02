@@ -2,7 +2,7 @@
 #define __VOIDLAND_TURNING_GRILLE_HPP__
 
 #include "WordsTrie.hpp"
-#include "MPMC_PortionQueue.hpp"
+#include <voidland/blown_queue/MPMC_PortionQueue.hpp>
 #include "Grille.hpp"
 
 #include <string>
@@ -15,13 +15,21 @@
 #include <optional>
 #include <set>
 #include <boost/algorithm/string/regex.hpp>
-#include "concurrentqueue/concurrentqueue.h"
+
+#include <voidland/blown_queue/blown_queue_config.h>
+#ifdef HAVE_MOODYCAMEL_CONCURRENT_QUEUE
+#	ifdef HAVE_MOODYCAMEL_IN_INCLUDE_PATH
+#		include <concurrentqueue/moodycamel/concurrentqueue.h>
+#	else
+#		include <concurrentqueue/concurrentqueue.h>
+#	endif
+#endif
 
 
-using namespace org::voidland::concurrent;
+using namespace voidland::concurrent;
 
 
-namespace org::voidland::concurrent
+namespace voidland::concurrent
 {
 
 extern bool VERBOSE;
@@ -29,7 +37,7 @@ extern bool VERBOSE;
 }
 
 
-namespace org::voidland::concurrent::turning_grille
+namespace voidland::concurrent::turning_grille
 {
 
 
