@@ -3,7 +3,6 @@
 *.o
 .dirstamp
 /silo
-/build/
 
 /Makefile
 /Makefile.in
@@ -26,3 +25,7 @@
 /.cproject
 /.project
 /.settings/
+
+/build*/
+/*_test.sh
+/measurements/

@@ -1,5 +1,8 @@
 Cargo.lock
-/target/
 
 /.project
 /.settings/
+
+/target*/
+/*_test.sh
+/measurements/
