@@ -56,20 +56,20 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|---|
-| atomic | 851 | 871 | 3367 | 3576 |
-| ramalhete | 841 | 870 | 3080 | 3453 |
-| concurrent | 843 | 825 | 2998 | 3367 |
-| vyukov | 846 | 865 | 2918 | 3271 |
-| michael_scott | 817 | 840 | 2567 | 3007 |
-| lockfree | 824 | 856 | 2312 | 2983 |
-| nikolaev_bounded | 829 | 829 | 2823 | 3246 |
-| kirsch_1fifo | 733 | 776 | 1214 | 1690 |
-| kirsch_bounded_1fifo | 806 | 852 | 1504 | 1941 |
-| onetbb | ~~477~~ | ~~322~~ | ~~823~~ | ~~744~~ |
-| onetbb_bounded | ~~372~~ | ~~444~~ | ~~1407~~ | ~~1020~~ |
-| textbook | 720 | 404 | 1094 | 1248 |
-| syncless | 989 | 1061 | 4689 | 4615 |
-| serial | 386 | 243 | 520 | 595 |
+| atomic | 831 | 1308 | 3367 | 3574 |
+| ramalhete | 825 | 1309 | 3080 | 3428 |
+| concurrent | 829 | 1264 | 2998 | 3378 |
+| vyukov | 832 | 1310 | 2918 | 3253 |
+| michael_scott | 791 | 1265 | 2567 | 2969 |
+| lockfree | 808 | 1295 | 2312 | 2938 |
+| nikolaev_bounded | 811 | 1264 | 2823 | 3289 |
+| kirsch_1fifo | 723 | 1150 | 1214 | 1698 |
+| kirsch_bounded_1fifo | 796 | 1254 | 1504 | 1965 |
+| onetbb | ~~418~~ | ~~653~~ | ~~823~~ | ~~719~~ |
+| onetbb_bounded | ~~386~~ | ~~548~~ | ~~1407~~ | ~~998~~ |
+| textbook | 661 | 821 | 1094 | 1222 |
+| syncless | 981 | 1597 | 4689 | 4615 |
+| serial | 389 | 347 | 520 | 584 |
 
 General results:
 - `atomic` is the winner among the queues.

@@ -76,15 +76,15 @@ Implementations with very unstable measurements should not be trusted too much f
 
 Test hardware
 
-| CPU name | Base frequency | Cores | Hardware threads (N) | L1 cache | L2 cache | L3 cache | Year purchased | Computer type |
-|---|---|---|---|---|---|---|---|--|
-| Intel Core i5-4210M | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
-| Intel Core i5-10210U | 1.6 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2020 | low mid-range laptop |
-| AMD Ryzen 3700X | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2020 | high mid-range desktop |
-| AMD Ryzen 7735HS | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2025 | high mid-range laptop |
+| CPU name | Architecture | Frequency | Cores | Hardware threads (N) | L1 cache | L2 cache | L3 cache | Year | Computer type |
+|---|---|---|---|---|---|---|---|---|---|
+| Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | 512 KB | 0 | 2015 | single-board |
+| Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
+| Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
+| AMD Ryzen 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
+| AMD Ryzen 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
-All the CPUs are set to run constantly at their base frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.  
-Remark: The Intel Core i5-10210U base frequency is artificially low. This CPU can operate at boosted frequency indefinitely. De facto, it performs much better than what the tests here show.
+All the CPUs are set to run constantly at their specified frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.  
 
 ---
 
@@ -92,17 +92,17 @@ Intel Core i5-4210M
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 989 | 851 | 720 |
-| **Rust/native** | 873 | 732 | 380 |
-| **Java/JVM** | ~~510~~ | 481 | 409 |
+| **C++/native** | 981 | 832 | 661 |
+| **Rust/native** | 838 | 723 | 377 |
+| **Java/JVM** | ~~510~~ | 482 | 411 |
 
 Intel Core i5-10210U
 
 | runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 1061 | 871 |  404 |
-| **Rust/native** | 879 | 742 | 415 |
-| **Java/JVM** | ~~630~~ | 561 | 384 |
+| **C++/native** | 1597 | 1310 |  821 |
+| **Rust/native** | 1196 | 1067 | 621 |
+| **Java/JVM** | ~~934~~ | 847 | 614 |
 
 AMD Ryzen 3700X
 
@@ -116,18 +116,18 @@ AMD Ryzen 7735HS
 
 | runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
 |---|---|---|---|
-| **C++/native** | 4615 | 3576 | 1248 |
-| **Rust/native** | 4007 | 2821 | 752 |
-| **Java/JVM** | ~~2069~~ | 2054 | 862 |
+| **C++/native** | 4615 | 3574 | 1222 |
+| **Rust/native** | 3936 | 2943 | 752 |
+| **Java/JVM** | ~~1983~~ | 2119 | 882 |
 
 `serial` (single-threaded)
 
 | CPU / runtime | C++ | Rust | Java |
 |---|---|---|---|
-| Intel Core i5-4210M | 386 | 318 | 240 |
-| Intel Core i5-10210U | 243 | 201 | 155 |
+| Intel Core i5-4210M | 389 | 329 | 240 |
+| Intel Core i5-10210U | 347 | 281 | 227 |
 | AMD Ryzen 3700X | 520 | 449 | 358 |
-| AMD Ryzen 7735HS | 595 | 484 | 390 |
+| AMD Ryzen 7735HS | 584 | 476 | 390 |
 
 ---
 

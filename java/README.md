@@ -25,11 +25,11 @@ The resulting JAR is `target/silo-*.jar`.
 
 | Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 7735HS (16) |
 |---|---|---|---|---|
-| concurrent | 481 | 561 | 2201 | 2054 |
-| textbook | 409 | 384 | 814 | 862 |
-| blocking | 366 | 426 | 969 | 1249 |
-| syncless | ~~510~~ | ~~630~~ | ~~2161~~ | ~~2069~~ |
-| serial | 240 | 155 | 358 | 391 |
+| concurrent | 482 | 847 | 2201 | 2119 |
+| textbook | 411 | 614 | 814 | 882 |
+| blocking | 380 | 597 | 969 | 1204 |
+| syncless | ~~510~~ | ~~934~~ | ~~2161~~ | ~~1983~~ |
+| serial | 240 | 227 | 358 | 390 |
 
 ---  
 
@@ -37,11 +37,11 @@ AMD Ryzen 7735HS
 
 | Implementation / JVM  version | 8 | 11 | 17 | 21 |
 |---|---|---|---|---|
-| concurrent | 2046 | 2051 | 2125 | 2054 |
-| textbook | 922 | 897 | 1034 | 862 |
-| blocking | 897 | 814 | 1159 | 1249 |
-| syncless | ~~2186~~ | ~~2321~~ | ~~2073~~ | ~~2069~~ |
-| serial | 395 | 363 | 372 | 391 |
+| concurrent | 2059 | 2168 | 2232 | 2119 |
+| textbook | 923 | 899 | 943 | 882 |
+| blocking | 920 | 841 | 1180 | 1204 |
+| syncless | ~~2535~~ | ~~2297~~ | ~~2075~~ | ~~1983~~ |
+| serial | 394 | 366 | 372 | 390 |
 
 General results:
 - `concurrent` is the winner among the queues.
