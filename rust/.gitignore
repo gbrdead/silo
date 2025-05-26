@@ -4,5 +4,4 @@ Cargo.lock
 /.settings/
 
 /target*/
-/*_test.sh
 /measurements/
