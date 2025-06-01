@@ -15,14 +15,18 @@ export JAVA_VERSIONS
 
 for LANGUAGE in ${LANGUAGES}
 do
-	mkdir -p "${LANGUAGE}/measurements"
+    mkdir -p "${LANGUAGE}/measurements"
 done
+
+git pull
+(cd c++ && make -C "build.$(uname --machine)")
+(cd rust && cargo build --release --target-dir "target.$(uname --machine)")
+(cd java && mvn package)
 
 for MIN_MEASUREMENT_COUNT in $(seq 1 1000000)
 do
-	for LANGUAGE in ${LANGUAGES}
-	do
-		"./${LANGUAGE}/test.sh" ${MIN_MEASUREMENT_COUNT}
-	done
+    for LANGUAGE in ${LANGUAGES}
+    do
+        "./${LANGUAGE}/test.sh" ${MIN_MEASUREMENT_COUNT}
+    done
 done
-

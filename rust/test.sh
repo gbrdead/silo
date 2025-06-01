@@ -3,9 +3,6 @@ set -e -o pipefail
 
 cd "$(dirname "${0}")"
 
-git pull
-cargo build --release --target-dir "target.$(uname --machine)"
-
 TMP_FILE=$(mktemp)
 for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
 do
