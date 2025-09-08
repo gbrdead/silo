@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -o pipefail
 
-LANGUAGES="c++ rust java"
+LANGUAGES="java rust c++"
 
 export HOST=$(basename "${0}" _test.sh)
 cd "$(dirname "${0}")"
@@ -19,7 +19,10 @@ do
 done
 
 git pull
-(cd c++ && make -C "build.$(uname --machine)")
+for COMPILER in gcc clang
+do
+    (cd c++ && make -C "build.$(uname --machine).${COMPILER}")
+done
 (cd rust && cargo build --release --target-dir "target.$(uname --machine)")
 (cd java && mvn package)
 
