@@ -1,10 +1,19 @@
+cargo-features = ["codegen-backend"]
+
+[profile.release_default]
+inherits = "release"
+
+[profile.release_gcc]
+inherits = "release"
+codegen-backend = "gcc"
+
 [package]
 name = "silo-rust"
 version = "0.0.1"
 edition = "2024"
 
 [dependencies]
-regex = "1.11"
+regex = "1.12"
 concurrent-queue = "2.5"
 parking_lot = "0.12"
 crossbeam = "0.8"
