@@ -81,8 +81,9 @@ Test hardware
 | Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | 512 KB | 0 | 2015 | single-board |
 | Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
 | Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
-| AMD Ryzen 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
-| AMD Ryzen 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
+| AMD Ryzen 7 6800U | x86-64 | 2.7 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2022 | mid-range laptop |
+| AMD Ryzen 7 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
+| AMD Ryzen 7 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
 All the CPUs are set to run constantly at their specified frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.  
 

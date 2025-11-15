@@ -16,7 +16,7 @@ do
                 continue
             fi
                 
-            echo -n "C++ ${COMPILER} ${TEST}: "
+            echo -n "C++ ${TEST} ${COMPILER}: "
                 
             cd ..
             "./c++/build.$(uname --machine).${COMPILER}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"

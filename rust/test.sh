@@ -16,7 +16,7 @@ do
 				continue
 			fi
 		
-			echo -n "Rust ${BACKEND} ${TEST}: "
+			echo -n "Rust ${TEST} ${BACKEND}: "
 		
 			cd ..
 			"./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
