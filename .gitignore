@@ -1,8 +1,9 @@
 *~
 
 /cpu.def
-/*_test.sh
 
-/.project
-/.pydevproject
-/.settings/
+.project
+.pydevproject
+.settings/
+
+__pycache__/

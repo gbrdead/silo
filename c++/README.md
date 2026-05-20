@@ -1,15 +1,6 @@
-# Silo C++ multi-threading performance test
+# Silo C++ performance test
 
 ## Build
-
-### Quick build instructions for a Debian-based GNU/Linux distribution:
-
-`# apt install g++ autoconf automake autoconf-archive make libboost-all-dev libtbb-dev`  
-`$ ./autogen.sh`  
-`$ CXXFLAGS="-O3" ./configure`  
-`$ make`  
-
-### Detailed build instructions
 
 These instructions have been tested on Debian GNU/Linux but they should be applicable with minor modifications on any modern UNIX OS.
 
@@ -23,11 +14,25 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 5. Install [oneAPI Threading Building Blocks](https://uxlfoundation.github.io/oneTBB/). The package name is ***libtbb-dev***.
 
-6. Run `autogen.sh` in the source directory.
+6. Build and install [BlownQueue](https://github.com/gbrdead/blown_queue) for C++:
 
-7. Run `configure` from the build directory. You can use the source directory as a build directory, too. Using a separate initially empty directory is recommended.
+`$ git clone https://github.com/gbrdead/blown_queue`  
+`$ cd blown_queue`  
+`# ./.github/workflows/install_queues.sh /usr/local`  
+`$ cd c++`  
+`$ autoreconf -s -i`  
+`$ ./configure`  
+`$ make`  
+`# make install`  
 
-8. Run `make`. The resulting executable is named `silo`.
+7. Build `silo` itself:
+
+`$ cd silo/c++`  
+`$ autoreconf -s -i`  
+`$ CXXFLAGS="-O3" ./configure`  
+`$ make`  
+
+The resulting executable is named `silo`.
 
 ## Running the reference test
 
@@ -54,33 +59,48 @@ These instructions have been tested on Debian GNU/Linux but they should be appli
 
 ## Test results
 
-| Implementation / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|
-| atomic | 831 | 1308 | 3367 | 3574 |
-| ramalhete | 825 | 1309 | 3080 | 3428 |
-| concurrent | 829 | 1264 | 2998 | 3378 |
-| vyukov | 832 | 1310 | 2918 | 3253 |
-| michael_scott | 791 | 1265 | 2567 | 2969 |
-| lockfree | 808 | 1295 | 2312 | 2938 |
-| nikolaev_bounded | 811 | 1264 | 2823 | 3289 |
-| kirsch_1fifo | 723 | 1150 | 1214 | 1698 |
-| kirsch_bounded_1fifo | 796 | 1254 | 1504 | 1965 |
-| onetbb | ~~418~~ | ~~653~~ | ~~823~~ | ~~719~~ |
-| onetbb_bounded | ~~386~~ | ~~548~~ | ~~1407~~ | ~~998~~ |
-| textbook | 661 | 821 | 1094 | 1222 |
-| syncless | 981 | 1597 | 4689 | 4615 |
-| serial | 389 | 347 | 520 | 584 |
+### Test results per implementation
 
-General results:
+| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|---|
+| `atomic` | 245 | 831 | 1311 | 3398 | 3437 | 3574|
+| `ramalhete` | 238 | 825 | 1310 | 3192 | 3311 | 3428|
+| `concurrent` | 245 | 829 | 1272 | 3089 | 3027 | 3378|
+| `vyukov` | 248 | 838 | 1312 | 2946 | 3173 | 3253|
+| `michael_scott` | 226 | 791 | 1262 | 2607 | 2857 | 2937|
+| `lockfree` | 231 | 808 | 1292 | 2340 | 2818 | 2936|
+| `nikolaev_bounded` | 228 | 811 | 1270 | 3100 | 3252 | 3256|
+| `kirsch_1fifo` | 190 | 723 | 1147 | 1208 | 1494 | 1695|
+| `kirsch_bounded_1fifo` | 214 | 796 | 1252 | 1990 | 2343 | 2265|
+| `onetbb` | ~~138~~ | ~~418~~ | ~~659~~ | ~~842~~ | ~~755~~ | ~~706~~|
+| `onetbb_bounded` | ~~127~~ | ~~386~~ | ~~636~~ | ~~1107~~ | ~~895~~ | ~~997~~|
+| `textbook` | 225 | 661 | 806 | 1089 | 967 | 1125|
+| `syncless` | 290 | 981 | 1600 | 4743 | 4206 | 4615|
+| `serial` | 73 | 389 | 347 | 528 | 501 | 584|
+
 - `atomic` is the winner among the queues.
-
-Some remarks: 
-- The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done.
-- At first glance, `onetbb_bounded` should work like `blown_queue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low compared 
-- The average speed of the oneTBB queues is inexplicably low. Also, their performance is erratic - the speed varies wildly.
+- The thread scheduler is very fair. Thus the `syncless` implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done.
+- At first glance, `onetbb_bounded` should work like `blown_queue` - non-blocking most of the time, blocking only on hitting its bounds. But its performance is too low for this to be true.
+- The average speeds of the oneTBB queues are inexplicably low. Also, their performance is erratic - the speed varies wildly.
 - `nikolaev_queue` has a stopper bug. Frequently it fails to pop an element even when the queue is not empty and this leads to a deadlock. That is why it is not measured.
 - `sync_bounded` has a stopper bug. Sometimes it fails to wake up a producer despite that the queue becomes not full and this leads to a deadlock. That is why it is not measured.
-- `nikolaev_bounded` has a non-stopper bug. Sometimes it moves the data out of the portion even if the push fails (because of a full queue). The portion is always copied as a workaround for this bug. 
+- `nikolaev_bounded` has a non-stopper bug. Sometimes it moves the data out of the portion even if the push fails because of a full queue. The portion is always copied as a workaround for this bug.
 
-## TODO
-- Measure the performance with Clang. The tests so far have been performed with GCC.
+### Test results per compiler
+
+| Implementation (compiler) / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|---|
+| syncless (GCC) | 290 | 981 | 1600 | 4743 | 4206 | 4615 |
+| syncless (Clang) | 238 | 844 | 1439 | 4211 | 3591 | 3878 |
+||
+| best_non_blocking (GCC) | 248 | 838 | 1312 | 3398 | 3437 | 3574 |
+| best_non_blocking (Clang) | 209 | 742 | 1226 | 3219 | 2945 | 2841 |
+||
+| textbook (GCC) | 225 | 661 | 806 | 1089 | 967 | 1125 |
+| textbook (Clang) | 196 | 638 | 761 | 1015 | 662 | 763 |
+||
+| serial (GCC) | 73 | 389 | 347 | 528 | 501 | 584 |
+| serial (Clang) | 61 | 250 | 326 | 461 | 424 | 500 |
+
+- Clang uses LLVM for code generation.
+- GCC-generated code is about 10-15% more performant that Clang/LLVM-generated code - exactly the opposite of the Rust case.

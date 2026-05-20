@@ -6,15 +6,13 @@ This project compares the multi-threading performance of the following runtimes:
 - [Rust/native](rust/README.md)
 - [Java/JVM](java/README.md)
 
-The test results and conclusions are at the bottom.  
-***Note: the measurements are still in progress. The presented results are not final.***
-
+**The test program employs typical operations - integer arithmetic, heavy RAM I/O (optimized for cache coherence to the best of every compiler's ability) and for most of the tests - synchronization primitives.** Peripheral I/O is not employed because its latency would swamp the differences between the benchmarked languages and runtimes.
 
 ### Description of the performance test
 
 The test program implements the [multiple producer - multiple consumer pattern](https://en.wikipedia.org/wiki/Producer%E2%80%93consumer_problem) for a real and useful workload. The task solved by the test is brute-forcing the key for an encrypted message.
 
-The cipher used to encrypt the message is known as [turning grille](https://www.dcode.fr/turning-grille-cipher). Each portion is a grille (key). The producers have to generate all the possible grilles. Consuming a portion is applying the grille to the encrypted message and counting the natural language words that can be found in the decrypted message. Words are counted using a trie data structure - the execution time does not depend on the size of the word list. As a result, consuming a portion is just a few times slower than producing it, i.e. the CPU resources used by a consumer are comparable to those used by a producer.  
+The cipher used to encrypt the message is known as [turning grille](https://www.dcode.fr/turning-grille-cipher). Each portion is a grille (key). The producers have to generate all the possible grilles. Consuming a portion is applying the grille to the encrypted message and counting the natural language words that can be found in the decrypted message. Words are counted using a trie data structure - the execution time does not depend on the size of the word list. As a result, consuming a portion is just a few times slower than producing it, i.e. the CPU resources used by a consumer are comparable to those used by a producer.
 
 ### Portion queue requirements
 
@@ -35,7 +33,7 @@ But the portion queue must be blocking.
 But the portion queue must be blocking only on hitting its bounds. Most of the time it does not have to block.
 
 `org::voidland::concurrent::queue::MPMC_PortionQueue` is an interface for a portion queue that can be used in a multiple producer - multiple consumer scenario.  
-`org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue` is an implementation of a portion queue that wraps a non-blocking queue. It blocks only when necesssary, i.e. most of the time it has the throughput of the internal non-blocking queue.  
+`org::voidland::concurrent::queue::BlownQueue` is an implementation of a portion queue that wraps a non-blocking queue. It blocks only when necesssary, i.e. most of the time it has the throughput of the internal non-blocking queue.  
 `org::voidland::concurrent::queue::TextbookPortionQueue` is a blocking implementation of a portion queue. It blocks on a single mutex and uses two conditions for signaling between the consumers and the producers. In the test, the mutex works under heavy contention.
 
 
@@ -43,7 +41,7 @@ But the portion queue must be blocking only on hitting its bounds. Most of the t
 
 Let N be the hardware parallelism (number of CPUs * number of hardware threads per CPU).
 
-`MostlyNonBlockingPortionQueue` still occasionally blocks. N producers and N consumers do not utilize all of the available CPU time.
+`BlownQueue` still occasionally blocks. N producers and N consumers do not utilize all of the available CPU time.
 
 `org::voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer` implements the producer-consumer pattern using a fixed number of producers and an adaptive number of consumers. If some part of the CPUs idle occasionally then the number of the consumers will be increased. If the contention of the threads becomes too high, their number will be decreased. `TurningGrilleCrackerProducerConsumer` is used for both the blocking and the mostly non-blocking portion queues.
 
@@ -81,72 +79,58 @@ Test hardware
 | Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | 512 KB | 0 | 2015 | single-board |
 | Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
 | Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
-| AMD Ryzen 7 6800U | x86-64 | 2.7 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2022 | mid-range laptop |
 | AMD Ryzen 7 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
+| AMD Ryzen 7 6800U | x86-64 | 2.7 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2022 | mid-range laptop |
 | AMD Ryzen 7 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
-All the CPUs are set to run constantly at their specified frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.  
+All the CPUs are set to run constantly at their specified frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.
 
----
+#### Test results per CPU
 
-Intel Core i5-4210M
+| Language / Implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` | `serial` |
+|---|---|---|---|---|
+| Allwinner A64 |
+| **C++** | 290 | 248 | 225 | 73 |
+| **Rust** | 238 | 208 | 195 | 59 |
+| **Java** | ~~148~~ | 96 | 111 | 38 |
+| Intel Core i5-4210M |
+| **C++** | 981 | 838 | 661 | 389 |
+| **Rust** | 838 | 566 | 377 | 301 |
+| **Java** | ~~534~~ | 482 | 426 | 250 |
+| Intel Core i5-10210U |
+| **C++** | 1600 | 1312 | 944 | 347 |
+| **Rust** | 1145 | 1086 | 734 | 297 |
+| **Java** | ~~933~~ | 869 | 580 | 228 |
+| AMD Ryzen 3700X |
+| **C++** | 4743 | 3398 | 1215 | 589 |
+| **Rust** | 3154 | 2688 | 761 | 510 |
+| **Java** | ~~1999~~ | 2127 | 853 | 411 |
+| AMD Ryzen 6800U |
+| **C++** | 4206 | 3437 | 1488 | 886 |
+| **Rust** | 3167 | 2846 | 555 | 709 |
+| **Java** | ~~2683~~ | 2268 | 993 | 524 |
+| AMD Ryzen 7735HS |
+| **C++** | 4615 | 3574 | 1291 | 847 |
+| **Rust** | 3215 | 2456 | 896 | 682 |
+| **Java** | ~~2424~~ | 2252 | 1034 | 541 |
 
-| runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
-|---|---|---|---|
-| **C++/native** | 981 | 832 | 661 |
-| **Rust/native** | 838 | 723 | 377 |
-| **Java/JVM** | ~~510~~ | 482 | 411 |
-
-Intel Core i5-10210U
-
-| runtime / test scenario | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
-|---|---|---|---|
-| **C++/native** | 1597 | 1310 |  821 |
-| **Rust/native** | 1196 | 1067 | 621 |
-| **Java/JVM** | ~~934~~ | 847 | 614 |
-
-AMD Ryzen 3700X
-
-| runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
-|---|---|---|---|
-| **C++/native** | 4689 | 3367 | 1094 |
-| **Rust/native** | 4247 | 3008 | 700 |
-| **Java/JVM** | ~~2161~~ | 2201 | 814 |
-
-AMD Ryzen 7735HS
-
-| runtime / scenario implementation | `syncless` | `best mostly non-blocking` | `textbook (blocking)` |
-|---|---|---|---|
-| **C++/native** | 4615 | 3574 | 1222 |
-| **Rust/native** | 3936 | 2943 | 752 |
-| **Java/JVM** | ~~1983~~ | 2119 | 882 |
-
-`serial` (single-threaded)
-
-| CPU / runtime | C++ | Rust | Java |
-|---|---|---|---|
-| Intel Core i5-4210M | 389 | 329 | 240 |
-| Intel Core i5-10210U | 347 | 281 | 227 |
-| AMD Ryzen 3700X | 520 | 449 | 358 |
-| AMD Ryzen 7735HS | 584 | 476 | 390 |
-
----
-
-General results:
 - C++ is 15-25% more performant than Rust.
-- C++ is about 2 times more performant than Java.
+- C++ is about 50% more performant than Java.
 - Non-blocking queues perform better than blocking ones, even at low hardware parallelism.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
-- The more the CPUs, the less viable is a blocking algorithm, especially with Rust and Java.
-- Single-core CPU improvements are still happenning, although not on a 1990-ies scale.
-- The CPU frequency still matters.
+- The more the CPUs, the less viable is a blocking algorithm (especially with Rust).
 
 Conclusions:
 - If you want an algorithm to take advantage of new CPUs it better be parallelized.
 - Use non-blocking synchronization to scale better with higher hardware parallelism.
 - If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ instead of Java and even Rust.
+- Rust does not live up to its hype, as its performance is noticeably lower than that of C++. Notice that the test implementations do not use Rust's unsafe features. While they may help with the performance a bit, their use would void Rust's primary advantage over C++ (memory safety).
 
 Language/runtime-specific results:
-- [C++ results and conslusions](c++/README.md)
-- [Rust results and conslusions](rust/README.md)
-- [Java results and conslusions](java/README.md)
+- [C++ results and conclusions](c++/README.md)
+- [Rust results and conclusions](rust/README.md)
+- [Java results and conclusions](java/README.md)
+
+CPU feature-specific results:
+- [Single core results and conclusions](README_serial.md)
+- [Simultaneous multi-threading results and conclusions](README_SMT.md)

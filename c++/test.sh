@@ -10,13 +10,14 @@ do
     do
         for TEST in syncless atomic concurrent ramalhete vyukov serial textbook lockfree michael_scott nikolaev_bounded kirsch_1fifo kirsch_bounded_1fifo onetbb onetbb_bounded
         do
-            LOG_FILE="measurements/${HOST}-${COMPILER}-${TEST}.log"
+            TEST_RUN="${HOST}-${COMPILER}-${TEST}"
+            LOG_FILE="measurements/${TEST_RUN}.log"
             if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
             then
                 continue
             fi
                 
-            echo -n "C++ ${TEST} ${COMPILER}: "
+            echo -n "C++ ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
                 
             cd ..
             "./c++/build.$(uname --machine).${COMPILER}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"

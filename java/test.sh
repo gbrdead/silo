@@ -10,13 +10,14 @@ do
     do
         for TEST in syncless concurrent serial textbook blocking
         do
-            LOG_FILE="measurements/${HOST}-${JAVA_VER}-${TEST}.log"
+            TEST_RUN="${HOST}-${JAVA_VER}-${TEST}"
+            LOG_FILE="measurements/${TEST_RUN}.log"
             if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
                then
                 continue
             fi
                     
-            echo -n "Java ${TEST} ${JAVA_VER}: "
+            echo -n "Java ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
                     
             cd ..
             /usr/lib/jvm/java-${JAVA_VER}-openjdk-*/bin/java -jar ./java/target/silo-*.jar ${TEST} 2>&1 | tee "${TMP_FILE}"

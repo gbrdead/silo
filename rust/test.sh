@@ -10,13 +10,14 @@ do
 	do
 		for TEST in syncless concurrent async_mpmc serial textbook sync_mpmc textbook_pl
 		do
-			LOG_FILE="measurements/${HOST}-${BACKEND}-${TEST}.log"
+		    TEST_RUN="${HOST}-${BACKEND}-${TEST}"
+			LOG_FILE="measurements/${TEST_RUN}.log"
 			if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
 			then
 				continue
 			fi
 		
-			echo -n "Rust ${TEST} ${BACKEND}: "
+			echo -n "Rust ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
 		
 			cd ..
 			"./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
