@@ -6,18 +6,18 @@ Single-threaded performance is still important because of:
 
 ### Description of the performance test
 
-The serial implementation uses a single thread. The same work is performed but in a serial manner. No synchronization is needed.
+The serial implementation uses a single thread (and thus a single CPU core). The same work is performed but in a serial manner. No synchronization is needed.
 
 Unlike the other (multi-threaded) implementations, this one uses just a small amount of memory and is thus very unlikely to take advantage of the greater amount of cache memory in the newer CPUs.
 
-| CPU name | Frequency | L1 cache | L2 cache | L3 cache | Year |
+| CPU name | Frequency | L1 cache (per core) | L2 cache (per core) | L3 cache (common) | Year |
 |---|---|---|---|---|---|
-| Allwinner A64 | 1.15 GHz | 256 KB | 512 KB | 0 | 2015 |
-| Intel Core i5-4210M | 2.6 GHz | 128 KB | 512 KB | 3 MB | 2014 |
-| Intel Core i5-10210U | 2.4 GHz | 256 KB | 1 MB | 6 MB | 2019 |
-| AMD Ryzen 7 3700X | 3.6 GHz | 512 KB | 4 MB | 32 MB | 2019 |
-| AMD Ryzen 7 6800U | 2.7 GHz | 512 KB | 4 MB | 16 MB | 2022 |
-| AMD Ryzen 7 7735HS | 3.2 GHz | 512 KB | 4 MB | 16 MB | 2023 |
+| Allwinner A64 | 1.15 GHz | 64 KB | | 512 KB | 2015 |
+| Intel Core i5-4210M | 2.6 GHz | 64 KB | 256 KB | 3 MB | 2014 |
+| Intel Core i5-10210U | 2.4 GHz | 64 KB | 256 KB | 6 MB | 2019 |
+| AMD Ryzen 7 3700X | 3.6 GHz | 64 KB | 512 KB | 32 MB | 2019 |
+| AMD Ryzen 7 6800U | 2.7 GHz | 64 KB | 512 KB | 16 MB | 2022 |
+| AMD Ryzen 7 7735HS | 3.2 GHz | 64 KB | 512 KB | 16 MB | 2023 |
 
 | CPU / Language | C++ | Rust | Java |
 |---|---|---|---|

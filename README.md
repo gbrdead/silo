@@ -74,9 +74,9 @@ Implementations with very unstable measurements should not be trusted too much f
 
 Test hardware
 
-| CPU name | Architecture | Frequency | Cores | Hardware threads (N) | L1 cache | L2 cache | L3 cache | Year | Computer type |
+| CPU name | Architecture | Frequency | Cores | Hardware threads (N) | L1 cache (total) | L2 cache (total) | L3 cache (total) | Year | Computer type |
 |---|---|---|---|---|---|---|---|---|---|
-| Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | 512 KB | 0 | 2015 | single-board |
+| Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | | 512 KB | 2015 | single-board |
 | Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
 | Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
 | AMD Ryzen 7 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
