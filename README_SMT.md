@@ -5,26 +5,24 @@ Simultaneous multi-threading (a.k.a. hyper-threading by Intel) is a technology t
 | CPU / Implementation (SMT) | `syncless` (on) | `syncless` (off) | | `best mostly non-blocking` (on) | `best mostly non-blocking` (off) | | `textbook (blocking)` (on) | `textbook (blocking)` (off) | | `serial` (on) | `serial` (off) |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | C++ (GCC) |
-| **Intel Core i5-4210M** | 981 | 720 | | 838 | 673 | | 661 | 658 | | 389 | 343 |
-| **Intel Core i5-10210U** | 1600 | 1373 | | 1312 | 1020 | | 806 | 944 | | 347 | 299 |
-| **AMD Ryzen 3700X** | 4743 | 3561 | | 3398 | 2390 | | 1089 | 1215 | | 528 | 589 |
-| **AMD Ryzen 6800U** | 4206 | 3748 | | 3437 | 2765 | | 967 | 1280 | | 501 | 886 |
-| **AMD Ryzen 7735HS** | 4615 | 3773 | | 3574 | 2680 | | 1125 | 1222 | | 584 | 847 |
+| **Intel Core i5-4210M** | 993 | 806 | | 853 | 692 | | 661 | 687 | | 413 | 394 |
+| **Intel Core i5-4210M** | 993 | 806 | | 853 | 692 | | 661 | 687 | | 413 | 394 |
+| **Intel Core i5-10210U** | 1558 | 1360 | | 1300 | 1017 | | 587 | 974 | | 362 | 361 |
+| **AMD Ryzen 6800U** | 4193 | 3460 | | 3368 | 2611 | | 830 | 1082 | | 521 | 519 |
+| **AMD Ryzen 7735HS** | 4709 | 4023 | | 3439 | 2659 | | 1034 | 1422 | | 616 | 618 |
 | Rust |
-| **Intel Core i5-4210M** | 838 | 574 | | 549 | 566 | | 377 | 337 | | 289 | 301 |
-| **Intel Core i5-10210U** | 1145 | 1099 | | 1086 | 909 | | 615 | 734 | | 287 | 297 |
-| **AMD Ryzen 3700X** | 3154 | N/A | | 2688 | 2113 | | 761 | N/A | | 510 | N/A |
-| **AMD Ryzen 6800U** | 3167 | 3037 | | 2846 | 2430 | | 417 | 555 | | 709 | 668 |
-| **AMD Ryzen 7735HS** | 3115 | 3215 | | 2233 | 2456 | | 750 | 896 | | 476 | 682 |
+| **Intel Core i5-4210M** | 829 | 600 | | 722 | 549 | | 357 | 373 | | 317 | 295 |
+| **Intel Core i5-10210U** | 1316 | 1126 | | 1192 | 920 | | 453 | 676 | | 288 | 286 |
+| **AMD Ryzen 6800U** | 3290 | 2703 | | 2647 | 2206 | | 421 | 415 | | 383 | 388 |
+| **AMD Ryzen 7735HS** | 3623 | 3162 | | 2773 | 2417 | | 535 | 696 | | 460 | 461 |
 | Java |
-| **Intel Core i5-4210M** | ~~534~~ | ~~494~~ | | 474 | 444 | | 356 | 401 | | 250 | 249 |
-| **Intel Core i5-10210U** | ~~846~~ | ~~859~~ | | 811 | 765 | | 402 | 436 | | 223 | 224 |
-| **AMD Ryzen 3700X** | ~~1999~~ | ~~1991~~ | | 2127 | 2014 | | 853 | 699 | | 358 | 411 |
-| **AMD Ryzen 6800U** | ~~2012~~ | ~~2026~~ | | 2216 | 1904 | | 925 | 752 | | 320 | 490 |
-| **AMD Ryzen 7735HS** | ~~2114~~ | ~~1979~~ | | 2252 | 1874 | | 991 | 876 | | 380 | 521 |
+| **Intel Core i5-4210M** | ~~520~~ | ~~475~~ | | 484 | 419 | | 352 | 364 | | 250 | 250 |
+| **Intel Core i5-10210U** | ~~855~~ | ~~861~~ | | 800 | 745 | | 465 | 459 | | 226 | 227 |
+| **AMD Ryzen 6800U** | ~~1816~~ | ~~1730~~ | | 2036 | 1704 | | 923 | 637 | | 319 | 319 |
+| **AMD Ryzen 7735HS** | ~~2032~~ | ~~1710~~ | | 2214 | 1790 | | 996 | 801 | | 377 | 380 |
 
 - SMT gives an improvement of 15-35% for lock-free algorithms.
 - SMT may lower the performance of blocking algorithms.
-- SMT lowers the performance of single-threaded algorithms.
+- SMT does not affect the performance of single-threaded algorithms.
 
-Conclusion: Unless running a legacy single CPU operating system, turning SMT on is worth it.
+Conclusion: Turning SMT on is usually worth it.

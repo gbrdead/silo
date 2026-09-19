@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e -o pipefail
 
-LANGUAGES="c++ rust java"
+LANGUAGES="java rust c++"
 
 cd "$(dirname "${0}")"
 
@@ -59,34 +59,34 @@ do
     mkdir -p "${LANGUAGE}/measurements"
 done
 
-for COMPILER in gcc clang
-do
-    (cd c++ && make -C "build.$(uname --machine).${COMPILER}")
-done
-(cd rust && cargo build --profile release_default --target-dir "target.$(uname --machine)")
-if [ -d ~/rustc_codegen_gcc ]
-then
-	(cd rust && CHANNEL=release ~/rustc_codegen_gcc/y.sh cargo build --profile release_gcc --target-dir "target.$(uname --machine)")
-fi
-(cd java && mvn package)
+#for COMPILER in gcc clang
+#do
+#    (cd c++ && make -C "build.$(uname --machine).${COMPILER}")
+#done
+#(cd rust && cargo build --profile release_default --target-dir "target.$(uname --machine)")
+#if [ -d ../rustc_codegen_gcc ]
+#then
+#	(cd rust && CHANNEL=release ../../rustc_codegen_gcc/y.sh cargo build --profile release_gcc --target-dir "target.$(uname --machine)")
+#fi
+#(cd java && mvn package)
 
 run()
 {
-    for LANGUAGE in ${LANGUAGES}
-    do
-        "./${LANGUAGE}/test.sh" ${MIN_MEASUREMENT_COUNT}
-    done
+    "./${LANGUAGE}/test.sh" ${MIN_MEASUREMENT_COUNT}
 }
 
 for MIN_MEASUREMENT_COUNT in $(seq 1 1000000)
 do
-    if ${SMP}
-    then
-        sudo sh -c "echo on > /sys/devices/system/cpu/smt/control"
-        HOST="${HOST}_smt" run
-        sudo sh -c "echo off > /sys/devices/system/cpu/smt/control"
-        HOST="${HOST}" run
-    else
-        run
-    fi
+    for LANGUAGE in ${LANGUAGES}
+    do
+        if ${SMP}
+        then
+            sudo sh -c "echo on > /sys/devices/system/cpu/smt/control"
+            HOST="${HOST}_smt" run
+            sudo sh -c "echo off > /sys/devices/system/cpu/smt/control"
+            HOST="${HOST}" run
+        else
+            run
+        fi
+    done
 done

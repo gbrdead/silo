@@ -79,7 +79,6 @@ Test hardware
 | Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | | 512 KB | 2015 | single-board |
 | Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
 | Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
-| AMD Ryzen 7 3700X | x86-64 | 3.6 GHz | 8 | 16 | 512 KB | 4 MB | 32 MB | 2019 | high mid-range desktop |
 | AMD Ryzen 7 6800U | x86-64 | 2.7 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2022 | mid-range laptop |
 | AMD Ryzen 7 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
@@ -94,37 +93,34 @@ All the CPUs are set to run constantly at their specified frequency for the dura
 | **Rust** | 238 | 208 | 195 | 59 |
 | **Java** | ~~148~~ | 96 | 111 | 38 |
 | Intel Core i5-4210M |
-| **C++** | 981 | 838 | 661 | 389 |
-| **Rust** | 838 | 566 | 377 | 301 |
-| **Java** | ~~534~~ | 482 | 426 | 250 |
+| **C++** | 993 | 853 | 687 | 413 |
+| **Rust** | 829 | 722 | 373 | 317 |
+| **Java** | ~~535~~ | 511 | 375 | 261 |
 | Intel Core i5-10210U |
-| **C++** | 1600 | 1312 | 944 | 347 |
-| **Rust** | 1145 | 1086 | 734 | 297 |
-| **Java** | ~~933~~ | 869 | 580 | 228 |
-| AMD Ryzen 3700X |
-| **C++** | 4743 | 3398 | 1215 | 589 |
-| **Rust** | 3154 | 2688 | 761 | 510 |
-| **Java** | ~~1999~~ | 2127 | 853 | 411 |
+| **C++** | 1578 | 1327 | 974 | 362 |
+| **Rust** | 1316 | 1192 | 676 | 288 |
+| **Java** | ~~917~~ | 840 | 474 | 227 |
 | AMD Ryzen 6800U |
-| **C++** | 4206 | 3437 | 1488 | 886 |
-| **Rust** | 3167 | 2846 | 555 | 709 |
-| **Java** | ~~2683~~ | 2268 | 993 | 524 |
+| **C++** | 4193 | 3368 | 1146 | 521 |
+| **Rust** | 3290 | 2647 | 421 | 388 |
+| **Java** | ~~2118~~ | 2036 | 923 | 336 |
 | AMD Ryzen 7735HS |
-| **C++** | 4615 | 3574 | 1291 | 847 |
-| **Rust** | 3215 | 2456 | 896 | 682 |
-| **Java** | ~~2424~~ | 2252 | 1034 | 541 |
+| **C++** | 4709 | 3439 | 1432 | 618 |
+| **Rust** | 3623 | 2773 | 696 | 461 |
+| **Java** | ~~2608~~ | 2214 | 996 | 400 |
 
-- C++ is 15-25% more performant than Rust.
-- C++ is about 50% more performant than Java.
+- C++ is noticeably more performant than Rust.
+- C++ is way more performant than Java.
+- Rust is noticeably more performant than Java.
 - Non-blocking queues perform better than blocking ones, even at low hardware parallelism.
 - Non-blocking queues scale better than blocking ones with hardware parallelism.
 - The more the CPUs, the less viable is a blocking algorithm (especially with Rust).
 
 Conclusions:
 - If you want an algorithm to take advantage of new CPUs it better be parallelized.
-- Use non-blocking synchronization to scale better with higher hardware parallelism.
+- Use non-blocking synchronization to scale better with higher hardware parallelism. Even better if you can avoid synchronization.
 - If an algorithm consists mostly of in-memory computations (i.e. no I/O) then it is definitely worth implementing it in C++ instead of Java and even Rust.
-- Rust does not live up to its hype, as its performance is noticeably lower than that of C++. Notice that the test implementations do not use Rust's unsafe features. While they may help with the performance a bit, their use would void Rust's primary advantage over C++ (memory safety).
+- Rust does not live up to its hype, as its performance is noticeably lower than that of C++. Note that the test implementations do not use Rust's unsafe features. While they may help with the performance a bit, their use would void Rust's primary advantage over C++ (memory safety).
 
 Language/runtime-specific results:
 - [C++ results and conclusions](c++/README.md)

@@ -61,22 +61,22 @@ The resulting executable is named `silo`.
 
 ### Test results per implementation
 
-| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|---|---|
-| `atomic` | 245 | 831 | 1311 | 3398 | 3437 | 3574|
-| `ramalhete` | 238 | 825 | 1310 | 3192 | 3311 | 3428|
-| `concurrent` | 245 | 829 | 1272 | 3089 | 3027 | 3378|
-| `vyukov` | 248 | 838 | 1312 | 2946 | 3173 | 3253|
-| `michael_scott` | 226 | 791 | 1262 | 2607 | 2857 | 2937|
-| `lockfree` | 231 | 808 | 1292 | 2340 | 2818 | 2936|
-| `nikolaev_bounded` | 228 | 811 | 1270 | 3100 | 3252 | 3256|
-| `kirsch_1fifo` | 190 | 723 | 1147 | 1208 | 1494 | 1695|
-| `kirsch_bounded_1fifo` | 214 | 796 | 1252 | 1990 | 2343 | 2265|
-| `onetbb` | ~~138~~ | ~~418~~ | ~~659~~ | ~~842~~ | ~~755~~ | ~~706~~|
-| `onetbb_bounded` | ~~127~~ | ~~386~~ | ~~636~~ | ~~1107~~ | ~~895~~ | ~~997~~|
-| `textbook` | 225 | 661 | 806 | 1089 | 967 | 1125|
-| `syncless` | 290 | 981 | 1600 | 4743 | 4206 | 4615|
-| `serial` | 73 | 389 | 347 | 528 | 501 | 584|
+| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|
+| `atomic` | 245 | 853 | 1326 | 3368 | 3439|
+| `ramalhete` | 238 | 818 | 1298 | 3270 | 3398|
+| `concurrent` | 245 | 837 | 1327 | 3256 | 3223|
+| `vyukov` | 248 | 846 | 1276 | 3161 | 3257|
+| `michael_scott` | 226 | 808 | 1241 | 2955 | 3026|
+| `lockfree` | 231 | 824 | 1285 | 2830 | 2878|
+| `nikolaev_bounded` | 228 | 800 | 1280 | 3234 | 3406|
+| `kirsch_1fifo` | 190 | 744 | 1149 | 1466 | 1594|
+| `kirsch_bounded_1fifo` | 214 | 797 | 1276 | 2227 | 2242|
+| `onetbb` | ~~138~~ | ~~323~~ | ~~525~~ | ~~851~~ | ~~1047~~|
+| `onetbb_bounded` | ~~127~~ | ~~314~~ | ~~465~~ | ~~829~~ | ~~916~~|
+| `textbook` | 225 | 661 | 730 | 830 | 1034|
+| `syncless` | 290 | 993 | 1578 | 4193 | 4709|
+| `serial` | 73 | 413 | 362 | 521 | 616|
 
 - `atomic` is the winner among the queues.
 - The thread scheduler is very fair. Thus the `syncless` implementation is close to perfect. The most privileged thread finishes its job at more than 99% ot the total job done.
@@ -88,19 +88,19 @@ The resulting executable is named `silo`.
 
 ### Test results per compiler
 
-| Implementation (compiler) / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|---|---|
-| syncless (GCC) | 290 | 981 | 1600 | 4743 | 4206 | 4615 |
-| syncless (Clang) | 238 | 844 | 1439 | 4211 | 3591 | 3878 |
+| Implementation (compiler) / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|
+| syncless (GCC) | 290 | 993 | 1558 | 4193 | 4709 |
+| syncless (Clang) | 238 | 867 | 1578 | 3442 | 3640 |
 ||
-| best_non_blocking (GCC) | 248 | 838 | 1312 | 3398 | 3437 | 3574 |
-| best_non_blocking (Clang) | 209 | 742 | 1226 | 3219 | 2945 | 2841 |
+| best_non_blocking (GCC) | 248 | 853 | 1300 | 3368 | 3439 |
+| best_non_blocking (Clang) | 209 | 757 | 1327 | 2697 | 2593 |
 ||
-| textbook (GCC) | 225 | 661 | 806 | 1089 | 967 | 1125 |
-| textbook (Clang) | 196 | 638 | 761 | 1015 | 662 | 763 |
+| textbook (GCC) | 225 | 661 | 587 | 830 | 1034 |
+| textbook (Clang) | 196 | 627 | 730 | 652 | 686 |
 ||
-| serial (GCC) | 73 | 389 | 347 | 528 | 501 | 584 |
-| serial (Clang) | 61 | 250 | 326 | 461 | 424 | 500 |
+| serial (GCC) | 73 | 413 | 362 | 521 | 616 |
+| serial (Clang) | 61 | 259 | 348 | 418 | 489 |
 
 - Clang uses LLVM for code generation.
-- GCC-generated code is about 10-15% more performant that Clang/LLVM-generated code - exactly the opposite of the Rust case.
+- GCC-generated code is noticeably more performant that Clang/LLVM-generated code - exactly the opposite of the Rust case.

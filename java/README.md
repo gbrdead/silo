@@ -35,13 +35,13 @@ The resulting JAR is `target/silo-*.jar`.
 
 ### Test results per implementation
 
-| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 3700X (16) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|---|---|
-| `concurrent` | 96 | 482 | 869 | 2127 | 2268 | 2252|
-| `textbook` | 111 | 411 | 580 | 853 | 931 | 991|
-| `blocking` | 113 | 380 | 636 | 920 | 1212 | 1206|
-| `syncless` | ~~148~~ | ~~534~~ | ~~933~~ | ~~1999~~ | ~~2683~~ | ~~2424~~|
-| `serial` | 38 | 250 | 228 | 358 | 336 | 393|
+| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|
+| `concurrent` | 96 | 511 | 840 | 2036 | 2214|
+| `textbook` | 111 | 352 | 474 | 923 | 996|
+| `blocking` | 113 | 346 | 517 | 1200 | 1195|
+| `syncless` | ~~148~~ | ~~535~~ | ~~917~~ | ~~2118~~ | ~~2608~~|
+| `serial` | 38 | 258 | 226 | 336 | 400|
 
 - `concurrent` is the winner among the queues (it is the only non-blocking queue anyway).
 - `blocking` and `textbook` are very similar in their implementations and virtually identical when it comes to synchronization, yet the former is noticeably better than the latter at higher parallelism levels. The cause is unknown.
@@ -50,37 +50,36 @@ The resulting JAR is `target/silo-*.jar`.
 
 ### Test results per JVM version
 
-| Implementation (JVM) / CPU (hardware parallelism) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+| Implementation (JVM) / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
 |---|---|---|
-| concurrent (25) | 2216 | 2252 |
-| concurrent (21) | 2170 | 2077 |
-| concurrent (17) | 2268 | 2205 |
-| concurrent (11) | 1521 | 2151 |
-| concurrent (8) | 2155 | 2050 |
+| concurrent (25) | 484 | 800 | 2036 | 2214 |
+| concurrent (21) | 451 | 840 | 1863 | 1502 |
+| concurrent (17) | 456 | 822 | 1917 | 2082 |
+| concurrent (11) | 455 | 710 | 1417 | 1834 |
+| concurrent (8) | 511 | 803 | 1937 | 2207 |
 ||
-| textbook (25) | 925 | 991 |
-| textbook (21) | 914 | 889 |
-| textbook (17) | 931 | 978 |
-| textbook (11) | 777 | 911 |
-| textbook (8) | 903 | 951 |
+| textbook (25) | 352 | 465 | 923 | 996 |
+| textbook (21) | 336 | 473 | 854 | 822 |
+| textbook (17) | 342 | 474 | 810 | 952 |
+| textbook (11) | 300 | 355 | 872 | 895 |
+| textbook (8) | 351 | 439 | 841 | 924 |
 ||
-| blocking (25) | 1124 | 1205 |
-| blocking (21) | 1212 | 1206 |
-| blocking (17) | 1089 | 1168 |
-| blocking (11) | 810 | 813 |
-| blocking (8) | 875 | 904 |
+| blocking (25) | 346 | 472 | 1200 | 1145 |
+| blocking (21) | 336 | 517 | 1175 | 1195 |
+| blocking (17) | 337 | 503 | 1173 | 1067 |
+| blocking (11) | 305 | 358 | 873 | 928 |
+| blocking (8) | 340 | 399 | 998 | 979 |
 ||
-| syncless (25) | ~~2012~~ | ~~2114~~ |
-| syncless (21) | ~~1991~~ | ~~1961~~ |
-| syncless (17) | ~~2079~~ | ~~2028~~ |
-| syncless (11) | ~~2046~~ | ~~2339~~ |
-| syncless (8) | ~~2683~~ | ~~2424~~ |
+| syncless (25) | ~~520~~ | ~~855~~ | ~~1816~~ | ~~2032~~ |
+| syncless (21) | ~~480~~ | ~~873~~ | ~~1697~~ | ~~1667~~ |
+| syncless (17) | ~~486~~ | ~~917~~ | ~~1778~~ | ~~1927~~ |
+| syncless (11) | ~~478~~ | ~~737~~ | ~~1812~~ | ~~1861~~ |
+| syncless (8) | ~~535~~ | ~~836~~ | ~~2118~~ | ~~2608~~ |
 ||
-| serial (25) | 320 | 380 |
-| serial (21) | 333 | 391 |
-| serial (17) | 314 | 373 |
-| serial (11) | 307 | 366 |
-| serial (8) | 336 | 393 |
+| serial (25) | 250 | 226 | 319 | 377 |
+| serial (21) | 236 | 223 | 327 | 389 |
+| serial (17) | 237 | 217 | 315 | 374 |
+| serial (11) | 228 | 187 | 307 | 373 |
+| serial (8) | 258 | 210 | 336 | 400 |
 
 - There aren't any clearly noticeable accross-the-board performance improvements in the JVM between version 8 and version 25.
-- `blocking` (`ArrayBlockingQueue`) looks like improved between JVM 11 and 17. But there are no differences in the source and no other implementation shows a clear improvement at this threshold. So this is very likely an artefact of the measurements' instability.
