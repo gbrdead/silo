@@ -2,31 +2,34 @@
 set -e -o pipefail
 
 cd "$(dirname "${0}")"
+source ../common.sh
 
 TMP_FILE=$(mktemp)
 for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
 do
-	for BACKEND in ${RUST_BACKENDS}
-	do
-		for TEST in syncless concurrent async_mpmc serial textbook sync_mpmc textbook_pl
-		do
-		    TEST_RUN="${HOST}-${BACKEND}-${TEST}"
-			LOG_FILE="measurements/${TEST_RUN}.log"
-			if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
-			then
-				continue
-			fi
-		
-			echo -n "Rust ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
-		
-			cd ..
-			"./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
-			cd rust
-		
-			CURRENT_TIME=$(date -Iminutes)
-			echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"
-			cat "${TMP_FILE}" | tail -n 1 >> "${LOG_FILE}"
-		done
-	done
+    for BACKEND in ${RUST_BACKENDS}
+    do
+        for TEST in syncless concurrent async_mpmc serial textbook sync_mpmc textbook_pl
+        do
+            TEST_RUN="${HOST}-${BACKEND}-${TEST}"
+            LOG_FILE="measurements/${TEST_RUN}.log"
+            if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
+            then
+                continue
+            fi
+        
+            echo -n "Rust ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
+        
+            cd ..
+            "./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
+            cd rust
+            
+            assertNotThrottled
+        
+            CURRENT_TIME=$(date -Iminutes)
+            echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"
+            cat "${TMP_FILE}" | tail -n 1 >> "${LOG_FILE}"
+        done
+    done
 done
 rm "${TMP_FILE}"

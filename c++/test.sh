@@ -2,6 +2,7 @@
 set -e -o pipefail
 
 cd "$(dirname "${0}")"
+source ../common.sh
 
 TMP_FILE=$(mktemp)
 for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
@@ -22,6 +23,8 @@ do
             cd ..
             "./c++/build.$(uname --machine).${COMPILER}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
             cd c++
+            
+            assertNotThrottled
                 
             CURRENT_TIME=$(date -Iminutes)
             echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"

@@ -2,6 +2,7 @@
 set -e -o pipefail
 
 cd "$(dirname "${0}")"
+source ../common.sh
 
 TMP_FILE=$(mktemp)
 for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
@@ -13,7 +14,7 @@ do
             TEST_RUN="${HOST}-${JAVA_VER}-${TEST}"
             LOG_FILE="measurements/${TEST_RUN}.log"
             if [ -f "${LOG_FILE}" ] && [ $(wc -l < "${LOG_FILE}") -ge ${MIN_MEASUREMENT_COUNT} ]
-               then
+            then
                 continue
             fi
                     
@@ -22,6 +23,8 @@ do
             cd ..
             /usr/lib/jvm/java-${JAVA_VER}-openjdk-*/bin/java -jar ./java/target/silo-*.jar ${TEST} 2>&1 | tee "${TMP_FILE}"
             cd java
+            
+            assertNotThrottled
             
             CURRENT_TIME=$(date -Iminutes)
             echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"
