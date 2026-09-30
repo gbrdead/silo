@@ -4,9 +4,12 @@ set -e -o pipefail
 LANGUAGES="java rust c++"
 
 cd "$(dirname "${0}")"
+source ./common.sh
 
 
 ############################## CPU start ##############################
+
+assertNotThrottled
 
 while read HOST CPU_MODEL CPU_FREQ NO_TURBO BOOST JAVA_VERSIONS RUST_BACKENDS
 do
@@ -21,7 +24,7 @@ then
     echo "Unknown CPU model."
     exit 1
 fi
-export HOST
+export HOST CPU_MODEL CPU_FREQ
 
 sudo sh -c "echo on > /sys/devices/system/cpu/smt/control"
 if [ $(lscpu | grep "Thread(s) per core:" | sed 's/^[^:]*: *//') -gt 1 ]

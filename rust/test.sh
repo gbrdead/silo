@@ -18,13 +18,22 @@ do
                 continue
             fi
         
-            echo -n "Rust ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
+            while true
+            do        
+                echo -n "Rust ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
+                
+                resetTimeSpentStats
         
-            cd ..
-            "./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
-            cd rust
+                cd ..
+                "./rust/target.$(uname --machine)/release_${BACKEND}/silo" ${TEST} 2>&1 | tee "${TMP_FILE}"
+                cd rust
             
-            assertNotThrottled
+                assertNotThrottled
+                if assertTimeSpentStats
+                then
+                    break
+                fi
+            done
         
             CURRENT_TIME=$(date -Iminutes)
             echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"

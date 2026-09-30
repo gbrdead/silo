@@ -17,14 +17,23 @@ do
             then
                 continue
             fi
-                    
-            echo -n "Java ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
-                    
-            cd ..
-            /usr/lib/jvm/java-${JAVA_VER}-openjdk-*/bin/java -jar ./java/target/silo-*.jar ${TEST} 2>&1 | tee "${TMP_FILE}"
-            cd java
             
-            assertNotThrottled
+            while true
+            do        
+                echo -n "Java ${TEST_RUN} ${MIN_MEASUREMENT_COUNT}: "
+                
+                resetTimeSpentStats
+                    
+                cd ..
+                /usr/lib/jvm/java-${JAVA_VER}-openjdk-*/bin/java -jar ./java/target/silo-*.jar ${TEST} 2>&1 | tee "${TMP_FILE}"
+                cd java
+            
+                assertNotThrottled
+                if assertTimeSpentStats
+                then
+                    break
+                fi
+            done
             
             CURRENT_TIME=$(date -Iminutes)
             echo -n "${CURRENT_TIME} " >> "${LOG_FILE}"
