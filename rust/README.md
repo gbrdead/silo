@@ -31,15 +31,15 @@ The resulting executable is `target/release/silo`.
 
 ### Test results per implementation
 
-| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|---|
-| `async_mpmc` | 206 | 722 | 1144 | 2647 | 2675 |
-| `concurrent` | 208 | 657 | 1192 | 2609 | 2773 |
-| `textbook` | 195 | 357 | 453 | 421 | 535 |
-| `textbook_pl` | ~~201~~ | ~~780~~ | ~~1221~~ | ~~1855~~ | ~~1067~~ |
-| `sync_mpmc` | 207 | 752 | 1144 | 2339 | 2261 |
-| `syncless` | 238 | 829 | 1316 | 3290 | 3623 |
-| `serial` | 59 | 317 | 288 | 383 | 460 |
+| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Broadcom BCM2711 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|---|
+| `async_mpmc` | 206 | 501 | 722 | 1144 | 2647 | 2675 |
+| `concurrent` | 208 | 510 | 657 | 1192 | 2609 | 2773 |
+| `textbook` | 195 | 180 | 357 | 453 | 421 | 535 |
+| `textbook_pl` | 201 | 485 | 780 | 1221 | 1855 | 1067 |
+| `sync_mpmc` | 207 | 493 | 752 | 1144 | 2339 | 2261 |
+| `syncless` | 238 | 661 | 829 | 1316 | 3290 | 3623 |
+| `serial` | 59 | 170 | 317 | 288 | 383 | 460 |
 
 - `async_mpmc` is the winner among the queues, with `concurrent` a close second.
 - The thread scheduler is very fair. Thus the syncless implementation is close to perfect. The most privileged thread finishes its job at more than 99% of the total job done.

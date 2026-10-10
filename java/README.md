@@ -35,13 +35,13 @@ The resulting JAR is `target/silo-*.jar`.
 
 ### Test results per implementation
 
-| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|---|---|---|
-| `concurrent` | 96 | 511 | 840 | 2036 | 2214|
-| `textbook` | 111 | 352 | 474 | 923 | 996|
-| `blocking` | 113 | 346 | 517 | 1200 | 1195|
-| `syncless` | ~~148~~ | ~~535~~ | ~~917~~ | ~~2118~~ | ~~2608~~|
-| `serial` | 38 | 258 | 226 | 336 | 400|
+| Implementation / CPU (hardware parallelism) | Allwinner A64 (4) | Broadcom BCM2711 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|---|
+| `concurrent` | 96 | 447 | 511 | 840 | 2036 | 2155 |
+| `textbook` | 111 | 321 | 352 | 474 | 923 | 1094 |
+| `blocking` | 113 | 355 | 346 | 517 | 1200 | 1200 |
+| `syncless` | 148 | 528 | 535 | 917 | 2118 | 2472 |
+| `serial` | 38 | 137 | 258 | 226 | 336 | 400 |
 
 - `concurrent` is the winner among the queues (it is the only non-blocking queue anyway).
 - `blocking` and `textbook` are very similar in their implementations and virtually identical when it comes to synchronization, yet the former is noticeably better than the latter at higher parallelism levels. The cause is unknown.
@@ -50,36 +50,37 @@ The resulting JAR is `target/silo-*.jar`.
 
 ### Test results per JVM version
 
-| Implementation (JVM) / CPU (hardware parallelism) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
-|---|---|---|
-| concurrent (25) | 484 | 800 | 2036 | 2214 |
-| concurrent (21) | 451 | 840 | 1863 | 1502 |
-| concurrent (17) | 456 | 822 | 1917 | 2082 |
-| concurrent (11) | 455 | 710 | 1417 | 1834 |
-| concurrent (8) | 511 | 803 | 1937 | 2207 |
+| Implementation (JVM) / CPU (hardware parallelism) | Broadcom BCM2711 (4) | Intel Core i5-4210M (4) | Intel Core i5-10210U (8) | AMD Ryzen 6800U (16) | AMD Ryzen 7735HS (16) |
+|---|---|---|---|---|---|
+| concurrent (25) | 438 | 484 | 800 | 2036 | 1965 |
+| concurrent (21) | 392 | 451 | 840 | 1863 | 1752 |
+| concurrent (17) | 401 | 456 | 822 | 1917 | 2094 |
+| concurrent (11) | 383 | 455 | 710 | 1748 | 1703 |
+| concurrent (8) | 447 | 511 | 803 | 1937 | 2155 |
 ||
-| textbook (25) | 352 | 465 | 923 | 996 |
-| textbook (21) | 336 | 473 | 854 | 822 |
-| textbook (17) | 342 | 474 | 810 | 952 |
-| textbook (11) | 300 | 355 | 872 | 895 |
-| textbook (8) | 351 | 439 | 841 | 924 |
+| textbook (25) | 321 | 364 | 465 | 923 | 1094 |
+| textbook (21) | 302 | 353 | 473 | 854 | 908 |
+| textbook (17) | 277 | 375 | 474 | 810 | 1024 |
+| textbook (11) | 227 | 318 | 355 | 872 | 943 |
+| textbook (8) | 268 | 366 | 439 | 841 | 1031 |
 ||
-| blocking (25) | 346 | 472 | 1200 | 1145 |
-| blocking (21) | 336 | 517 | 1175 | 1195 |
-| blocking (17) | 337 | 503 | 1173 | 1067 |
-| blocking (11) | 305 | 358 | 873 | 928 |
-| blocking (8) | 340 | 399 | 998 | 979 |
+| blocking (25) | 328 | 371 | 472 | 1200 | 1200 |
+| blocking (21) | 355 | 356 | 517 | 1175 | 1185 |
+| blocking (17) | 321 | 349 | 503 | 1173 | 1162 |
+| blocking (11) | 231 | 312 | 358 | 873 | 852 |
+| blocking (8) | 268 | 370 | 399 | 998 | 1007 |
 ||
-| syncless (25) | ~~520~~ | ~~855~~ | ~~1816~~ | ~~2032~~ |
-| syncless (21) | ~~480~~ | ~~873~~ | ~~1697~~ | ~~1667~~ |
-| syncless (17) | ~~486~~ | ~~917~~ | ~~1778~~ | ~~1927~~ |
-| syncless (11) | ~~478~~ | ~~737~~ | ~~1812~~ | ~~1861~~ |
-| syncless (8) | ~~535~~ | ~~836~~ | ~~2118~~ | ~~2608~~ |
+| syncless (25) | 515 | 520 | 861 | 1816 | 1883 |
+| syncless (21) | 469 | 480 | 873 | 1697 | 1754 |
+| syncless (17) | 464 | 486 | 917 | 1778 | 1897 |
+| syncless (11) | 452 | 478 | 737 | 1812 | 1938 |
+| syncless (8) | 528 | 535 | 836 | 2118 | 2472 |
 ||
-| serial (25) | 250 | 226 | 319 | 377 |
-| serial (21) | 236 | 223 | 327 | 389 |
-| serial (17) | 237 | 217 | 315 | 374 |
-| serial (11) | 228 | 187 | 307 | 373 |
-| serial (8) | 258 | 210 | 336 | 400 |
+| serial (25) | 134 | 250 | 227 | 319 | 376 |
+| serial (21) | 121 | 238 | 223 | 327 | 385 |
+| serial (17) | 122 | 237 | 217 | 317 | 371 |
+| serial (11) | 118 | 229 | 188 | 309 | 369 |
+| serial (8) | 137 | 261 | 211 | 336 | 400 |
 
-- There aren't any clearly noticeable accross-the-board performance improvements in the JVM between version 8 and version 25.
+- There is a sharp drop in performance between Java 8 and 11. The underlying cause is unknown but it could be different default (as used by the tests) garbage collector settings.
+- After Java 11 the performance improves gradually.

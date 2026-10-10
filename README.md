@@ -59,16 +59,16 @@ Running a reference test with the environment variable `VERBOSE` set to `true` w
 - The `textbook` and `syncless` implementations in the different languages are 100% equivalent and can be used for inter-runtime comparisons.
 - The best mostly non-blocking implementations can also be used for inter-runtime comparisons.
 - The `serial` implementations can be used for single-threaded (i.e. single-core) comparisons.
+- The results from ARM CPUs are inherently better than those from x86 CPUs and should be preferred for everything other than inter-CPU or inter-architecture comparisons.
 
 ### Unstable measurements
 
 Some of the implementations for a given language/runtime do not yield stable measurements, i.e. the results vary too much. The possible reasons are:
 - A synchronization primitive (mutex) abruptly lowering its throughput at arbitrary moments.
 - Unfair scheduler for the `syncless` implementation - with such a scheduler the more privileged threads finish too early and then the CPUs are not fully utilized for a random amount of time until the less privileged threads finish their work.
-- Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, even when deemed stable, Java's measurements are noticeably less stable than C++' and Rust's ones.
-- High contention on a single mutex. The `textbook` implementations' measurements are inherently unstable, with higher parallelism leading to higher variations. They are deemed sufficiently stable, though.
+- Non-deterministic characteristics of the runtime (e.g. the JIT compiler and the garbage collector of the JVM). In general, Java's measurements are noticeably less stable than C++' and Rust's ones.
+- High contention on a single mutex. The `textbook` implementations' measurements are inherently unstable, with higher parallelism leading to higher variations.
 
-Implementations with very unstable measurements should not be trusted too much for comparisons. Such results will be shown ~~striken through~~.
 
 ### Test results
 
@@ -77,12 +77,16 @@ Test hardware
 | CPU name | Architecture | Frequency | Cores | Hardware threads (N) | L1 cache (total) | L2 cache (total) | L3 cache (total) | Year | Computer type |
 |---|---|---|---|---|---|---|---|---|---|
 | Allwinner A64 | aarch64 | 1.15 GHz | 4 | 4 | 256 KB | | 512 KB | 2015 | single-board |
+| Broadcom BCM2711 | aarch64 | 1.8 GHz | 4 | 4 | 320 KB | | 1 MB | 2019 | single-board |
 | Intel Core i5-4210M | x86-64 | 2.6 GHz | 2 | 4 | 128 KB | 512 KB | 3 MB | 2014 | mid-range laptop |
 | Intel Core i5-10210U | x86-64 | 2.4 GHz | 4 | 8 | 256 KB | 1 MB | 6 MB | 2019 | low mid-range laptop |
 | AMD Ryzen 7 6800U | x86-64 | 2.7 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2022 | mid-range laptop |
 | AMD Ryzen 7 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
-All the CPUs are set to run constantly at their specified frequency for the duration of the test. Boosting the frequency is disabled for the sake of stable measurements.
+- All the CPUs are set to run at their specified frequency for the duration of the test. Boosting the frequency is disabled.
+- However, the actual frequency of the x86 CPUs wobbles slightly below the specified one all the time. They cannot be set to run at a really fixed frequency. The only thing that can be done is to make cooling is good as possible and hope that the frequency will not drop significantly during a test. There is no way to determine whether there were such drops.
+- The ARM CPUs do run exactly at the specified frequency. There is a way to determine whether there were drops because of overheating. Such tests results were discarded.
+- Thus the results from the ARM CPUs are better for performance comparisons.
 
 #### Test results per CPU
 
@@ -91,23 +95,28 @@ All the CPUs are set to run constantly at their specified frequency for the dura
 | Allwinner A64 |
 | **C++** | 290 | 248 | 225 | 73 |
 | **Rust** | 238 | 208 | 195 | 59 |
-| **Java** | ~~148~~ | 96 | 111 | 38 |
+| **Java** | 148 | 96 | 111 | 38 |
+| Broadcom BCM2711 |
+| **C++** | 898 | 645 | 563 | 231 |
+| **Rust** | 661 | 510 | 180 | 170 |
+| **Java** | 528 | 447 | 321 | 137 |
 | Intel Core i5-4210M |
 | **C++** | 993 | 853 | 687 | 413 |
 | **Rust** | 829 | 722 | 373 | 317 |
-| **Java** | ~~535~~ | 511 | 375 | 261 |
+| **Java** | 535 | 511 | 375 | 261 |
 | Intel Core i5-10210U |
 | **C++** | 1578 | 1327 | 974 | 362 |
 | **Rust** | 1316 | 1192 | 676 | 288 |
-| **Java** | ~~917~~ | 840 | 474 | 227 |
+| **Java** | 917 | 840 | 474 | 227 |
 | AMD Ryzen 6800U |
 | **C++** | 4193 | 3368 | 1146 | 521 |
 | **Rust** | 3290 | 2647 | 421 | 388 |
-| **Java** | ~~2118~~ | 2036 | 923 | 336 |
+| **Java** | 2118 | 2036 | 923 | 336 |
 | AMD Ryzen 7735HS |
-| **C++** | 4709 | 3439 | 1432 | 618 |
+| **C++** | 4709 | 3439 | 1422 | 618 |
 | **Rust** | 3623 | 2773 | 696 | 461 |
-| **Java** | ~~2608~~ | 2214 | 996 | 400 |
+| **Java** | 2472 | 2155 | 1094 | 400 |
+
 
 - C++ is noticeably more performant than Rust.
 - C++ is way more performant than Java.

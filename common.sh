@@ -1,6 +1,6 @@
 assertNotThrottled()
 {
-    if sudo which vcgencmd &> /dev/null
+    if sudo vcgencmd get_throttled &> /dev/null
     then
         THROTTLED=$(sudo vcgencmd get_throttled)
         if [ "${THROTTLED}" != "throttled=0x0" ]
