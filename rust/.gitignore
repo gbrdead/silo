@@ -4,4 +4,3 @@ Cargo.lock
 /.settings/
 
 /target*/
-/measurements/
