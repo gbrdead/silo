@@ -84,7 +84,7 @@ Test hardware
 | AMD Ryzen 7 7735HS | x86-64 | 3.2 GHz | 8 | 16 | 512 KB | 4 MB | 16 MB | 2023 | high mid-range laptop |
 
 - All the CPUs are set to run at their specified frequency for the duration of the test. Boosting the frequency is disabled.
-- However, the actual frequency of the x86 CPUs wobbles slightly below the specified one all the time. They cannot be set to run at a really fixed frequency. The only thing that can be done is to make cooling is good as possible and hope that the frequency will not drop significantly during a test. There is no way to determine whether there were such drops.
+- However, the actual frequency of the x86 CPUs wobbles slightly below the specified one all the time. They cannot be set to run at a really fixed frequency. The only thing that can be done is to make cooling as good as possible and hope that the frequency will not drop significantly during a test. There is no way to determine whether there were such drops.
 - The ARM CPUs do run exactly at the specified frequency. There is a way to determine whether there were drops because of overheating. Such tests results were discarded.
 - Thus the results from the ARM CPUs are better for performance comparisons.
 

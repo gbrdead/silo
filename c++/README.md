@@ -4,7 +4,7 @@
 
 These instructions have been tested on Debian GNU/Linux but they should be applicable with minor modifications on any modern UNIX OS.
 
-1. Install a C++ compiler. Both GCC and Clang C++ compilers work. The package names are ***g++*** and ***clang++***, respectively.
+1. Install a C++ compiler. Both GCC and Clang C++ compilers work. The package names are ***g++*** and ***clang***, respectively.
 
 2. Install [autoconf](https://www.gnu.org/software/autoconf/) and [automake](https://www.gnu.org/software/automake/). The package names are ***autoconf*** and ***automake***, respectively.
 

@@ -15,7 +15,7 @@ edition = "2024"
 [dependencies]
 regex = "1.13"
 concurrent-queue = "2.5"
-parking_lot = "0.12"
+parking_lot = "0.13"
 crossbeam = "0.8"
 
 [[bin]]

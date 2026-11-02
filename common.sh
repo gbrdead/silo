@@ -5,8 +5,8 @@ assertNotThrottled()
         THROTTLED=$(sudo vcgencmd get_throttled)
         if [ "${THROTTLED}" != "throttled=0x0" ]
         then
-            echo
             echo "The CPU has been throttled; restart the host and retry."
+            touch measurements/throttled.restart
             exit 1
         fi
     fi
@@ -37,8 +37,8 @@ assertTimeSpentStats()
             awk '{ sum += $1 } END { print sum + 0 }')
         if [ ${TIME_SPENT_IN_WRONG_STATE} -ne 0 ]
         then
-            echo
             echo "The CPU has been throttled during the test; retrying."
+            touch measurements/throttled.retry
             return 1
         fi
     done
