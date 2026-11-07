@@ -9,7 +9,7 @@ for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
 do
     for JAVA_VER in ${JAVA_VERSIONS}
     do
-        for TEST in syncless concurrent serial textbook blocking
+        for TEST in syncless concurrent serial textbook blocking_array blocking_linked
         do
             TEST_RUN="${HOST}-${JAVA_VER}-${TEST}"
             LOG_FILE="measurements/${TEST_RUN}.log"

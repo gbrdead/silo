@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.voidland.concurrent.queue.BlockingPortionQueue;
@@ -69,9 +71,11 @@ public class Silo
         try
         {
             String cipherText;
+            int minDetectedWordAccount;
             try (BufferedReader cipherTextReader = new BufferedReader(new FileReader(Silo.CIPHER_TEXT_PATH)))
             {
                 cipherText = cipherTextReader.readLine();
+                minDetectedWordAccount = Integer.parseInt(cipherTextReader.readLine());
             }
             String clearText;
             try (BufferedReader clearTextReader = new BufferedReader(new FileReader(Silo.CLEAR_TEXT_PATH)))
@@ -107,13 +111,23 @@ public class Silo
                     crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
-                case "blocking":
+                case "blocking_array":
                 {
                     int initialConsumerCount = cpuCount * 3;
                     int producerCount = cpuCount;
                     int maxQueueSize = initialConsumerCount * producerCount * 1000;
                     
-                    MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(maxQueueSize);
+                    MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(maxQueueSize, new ArrayBlockingQueue<>(maxQueueSize));
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
+                    break;
+                }
+                case "blocking_linked":
+                {
+                    int initialConsumerCount = cpuCount * 3;
+                    int producerCount = cpuCount;
+                    int maxQueueSize = initialConsumerCount * producerCount * 1000;
+                    
+                    MPMC_PortionQueue<Grille> portionQueue = new BlockingPortionQueue<Grille>(maxQueueSize, new LinkedBlockingQueue<>(maxQueueSize));
                     crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
@@ -143,7 +157,7 @@ public class Silo
                 }
             }
 
-            TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, crackerImplDetails);
+            TurningGrilleCracker cracker = new TurningGrilleCracker(cipherText, minDetectedWordAccount, crackerImplDetails);
             if (!Silo.VERBOSE)
             {
             	Silo.heatCpu();

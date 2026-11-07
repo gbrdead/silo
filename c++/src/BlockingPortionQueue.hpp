@@ -37,8 +37,7 @@ public:
     void addPortion(const E& portion);
     void addPortion(E&& portion);
     std::optional<E> retrievePortion();
-    void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t finalConsumerCount);
+    void stopConsumers();
     std::size_t getSize();
     std::size_t getMaxSize();
 };
@@ -101,18 +100,7 @@ std::optional<E> TextbookPortionQueue<E>::retrievePortion()
 }
 
 template <typename E>
-void TextbookPortionQueue<E>::ensureAllPortionsAreRetrieved()
-{
-    std::unique_lock lock(this->mutex);
-
-    while (!this->queue.empty())
-    {
-        this->notFullCondition.wait(lock);
-    }
-}
-
-template <typename E>
-void TextbookPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
+void TextbookPortionQueue<E>::stopConsumers()
 {
     std::unique_lock lock(this->mutex);
 
@@ -138,11 +126,79 @@ std::size_t TextbookPortionQueue<E>::getMaxSize()
 
 
 template <typename E>
-class OneTBB_BoundedPortionQueue :
+class BlockingPortionQueue :
     public MPMC_PortionQueue<E>
 {
 private:
+    std::atomic<std::size_t> activeConsumerCount;
+    std::atomic<bool> workDone;
+
+protected:
     std::size_t maxSize;
+
+public:
+    BlockingPortionQueue(std::size_t maxSize);
+
+    std::optional<E> retrievePortion();
+    void stopConsumers();
+    std::size_t getMaxSize();
+
+protected:
+    virtual void addEmptyPortion() = 0;
+    virtual void retrievePortion(std::optional<E>& portion) = 0;
+    virtual bool isEmpty() = 0;
+};
+
+
+template <typename E>
+BlockingPortionQueue<E>::BlockingPortionQueue(std::size_t maxSize) :
+    maxSize(maxSize),
+	activeConsumerCount(0),
+	workDone(false)
+{
+}
+
+template <typename E>
+std::optional<E> BlockingPortionQueue<E>::retrievePortion()
+{
+	this->activeConsumerCount.fetch_add(1, std::memory_order_release);
+	std::optional<E> portion;
+	if (!this->workDone.load(std::memory_order_acquire))
+	{
+		this->retrievePortion(portion);
+	}
+    this->activeConsumerCount.fetch_sub(1, std::memory_order_release);
+    return portion;
+}
+
+template <typename E>
+void BlockingPortionQueue<E>::stopConsumers()
+{
+	while (!this->isEmpty())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+	}
+	this->workDone.store(true, std::memory_order_release);
+	std::size_t activeConsumerCount = this->activeConsumerCount.load(std::memory_order_acquire);
+    for (std::size_t i = 0; i < activeConsumerCount; i++)
+    {
+        this->addEmptyPortion();
+    }
+}
+
+template <typename E>
+std::size_t BlockingPortionQueue<E>::getMaxSize()
+{
+    return this->maxSize;
+}
+
+
+
+template <typename E>
+class OneTBB_BoundedPortionQueue :
+    public BlockingPortionQueue<E>
+{
+private:
     oneapi::tbb::concurrent_bounded_queue<std::optional<E>> queue;
 
 public:
@@ -150,20 +206,21 @@ public:
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
-    std::optional<E> retrievePortion();
-    void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t finalConsumerCount);
     std::size_t getSize();
-    std::size_t getMaxSize();
+
+protected:
+    void addEmptyPortion();
+    void retrievePortion(std::optional<E>& portion);
+    bool isEmpty();
 };
 
 
 template <typename E>
 OneTBB_BoundedPortionQueue<E>::OneTBB_BoundedPortionQueue(std::size_t maxSize) :
-    maxSize(maxSize),
+	BlockingPortionQueue<E>(maxSize),
 	queue()
 {
-    this->queue.set_capacity(this->maxSize);
+    this->queue.set_capacity(maxSize);
 }
 
 template <typename E>
@@ -179,29 +236,15 @@ void OneTBB_BoundedPortionQueue<E>::addPortion(E&& portion)
 }
 
 template <typename E>
-std::optional<E> OneTBB_BoundedPortionQueue<E>::retrievePortion()
+void OneTBB_BoundedPortionQueue<E>::addEmptyPortion()
 {
-    std::optional<E> portion;
+    this->queue.push(std::nullopt);
+}
+
+template <typename E>
+void OneTBB_BoundedPortionQueue<E>::retrievePortion(std::optional<E>& portion)
+{
     this->queue.pop(portion);
-    return portion;
-}
-
-template <typename E>
-void OneTBB_BoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
-{
-    while (!this->queue.empty())
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
-
-template <typename E>
-void OneTBB_BoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
-{
-    for (std::size_t i = 0; i < finalConsumerCount; i++)
-    {
-        this->queue.push(std::nullopt);
-    }
 }
 
 template <typename E>
@@ -211,19 +254,18 @@ std::size_t OneTBB_BoundedPortionQueue<E>::getSize()
 }
 
 template <typename E>
-std::size_t OneTBB_BoundedPortionQueue<E>::getMaxSize()
+bool OneTBB_BoundedPortionQueue<E>::isEmpty()
 {
-    return this->maxSize;
+    return this->queue.empty();
 }
 
 
 
 template <typename E>
 class SyncBoundedPortionQueue :
-    public MPMC_PortionQueue<E>
+    public BlockingPortionQueue<E>
 {
 private:
-    std::size_t maxSize;
     boost::sync_bounded_queue<std::optional<E>> queue;
 
 public:
@@ -231,17 +273,18 @@ public:
 
     void addPortion(const E& portion);
     void addPortion(E&& portion);
-    std::optional<E> retrievePortion();
-    void ensureAllPortionsAreRetrieved();
-    void stopConsumers(std::size_t finalConsumerCount);
     std::size_t getSize();
-    std::size_t getMaxSize();
+
+protected:
+    void addEmptyPortion();
+    void retrievePortion(std::optional<E>& portion);
+    bool isEmpty();
 };
 
 
 template <typename E>
 SyncBoundedPortionQueue<E>::SyncBoundedPortionQueue(std::size_t maxSize) :
-    maxSize(maxSize),
+	BlockingPortionQueue<E>(maxSize),
 	queue(maxSize)
 {
 }
@@ -259,29 +302,15 @@ void SyncBoundedPortionQueue<E>::addPortion(E&& portion)
 }
 
 template <typename E>
-std::optional<E> SyncBoundedPortionQueue<E>::retrievePortion()
+void SyncBoundedPortionQueue<E>::addEmptyPortion()
 {
-    std::optional<E> portion;
-    this->queue.pull_front(portion);
-    return portion;
+	this->queue.push_back(std::nullopt);
 }
 
 template <typename E>
-void SyncBoundedPortionQueue<E>::ensureAllPortionsAreRetrieved()
+void SyncBoundedPortionQueue<E>::retrievePortion(std::optional<E>& portion)
 {
-    while (!this->queue.empty())
-    {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
-
-template <typename E>
-void SyncBoundedPortionQueue<E>::stopConsumers(std::size_t finalConsumerCount)
-{
-    for (std::size_t i = 0; i < finalConsumerCount; i++)
-    {
-        this->queue.push_back(std::nullopt);
-    }
+	this->queue.pull_front(portion);
 }
 
 template <typename E>
@@ -291,9 +320,9 @@ std::size_t SyncBoundedPortionQueue<E>::getSize()
 }
 
 template <typename E>
-std::size_t SyncBoundedPortionQueue<E>::getMaxSize()
+bool SyncBoundedPortionQueue<E>::isEmpty()
 {
-    return this->maxSize;
+    return this->queue.empty();
 }
 
 

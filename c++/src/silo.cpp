@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
     try
     {
         std::string cipherText;
+        unsigned minDetectedWordAccount;
         {
             std::ifstream cipherTextStream(CIPHER_TEXT_PATH);
             if (cipherTextStream.fail())
@@ -64,6 +65,10 @@ int main(int argc, char *argv[])
             }
 
             std::getline(cipherTextStream, cipherText);
+
+            std::string line;
+            std::getline(cipherTextStream, line);
+            minDetectedWordAccount = (unsigned)std::stoul(line);
         }
         std::string clearText;
         {
@@ -255,7 +260,7 @@ int main(int argc, char *argv[])
             throw std::invalid_argument("Unexpected argument: " + arg);
         }
 
-        turning_grille::TurningGrilleCracker cracker(cipherText, std::move(crackerImplDetails));
+        turning_grille::TurningGrilleCracker cracker(cipherText, minDetectedWordAccount, std::move(crackerImplDetails));
         if (!VERBOSE)
         {
         	heatCpu();

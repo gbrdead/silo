@@ -41,7 +41,7 @@ impl<E: Send + Sync + 'static> MostlyNonBlockingPortionQueue<E>
         MostlyNonBlockingPortionQueue::new(maxSize, nonBlockingQueue)
     }
     
-    pub fn createAsynMPMC_BlownQueue(maxSize: usize) -> Self
+    pub fn createAsyncMPMC_BlownQueue(maxSize: usize) -> Self
     {
         let nonBlockingQueue: Box<dyn NonBlockingQueue<E>> = Box::new(AsyncMPMC_PortionQueue::<E>::new(maxSize));
         MostlyNonBlockingPortionQueue::new(maxSize, nonBlockingQueue)
@@ -188,17 +188,7 @@ impl<E: Send + Sync + 'static> MPMC_PortionQueue<E> for MostlyNonBlockingPortion
         portion
     }
     
-    fn ensureAllPortionsAreRetrieved(&self)
-    {
-        let mut lock = self.mutex.lock().unwrap();
-        self.notEmptyCondition.notify_all();
-        while self.sizes.size.load(Ordering::Acquire) > 0
-        {
-            lock = self.emptyCondition.wait(lock).unwrap();
-        }
-    }
-    
-    fn stopConsumers(&self, _finalConsumerCount: usize)
+    fn stopConsumers(&self)
     {
         let mut workDone = self.mutex.lock().unwrap();
         *workDone = true;

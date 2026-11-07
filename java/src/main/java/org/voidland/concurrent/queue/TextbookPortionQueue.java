@@ -90,25 +90,7 @@ public class TextbookPortionQueue<E>
 	}
 	
 	@Override
-	public void ensureAllPortionsAreRetrieved()
-		throws InterruptedException
-	{
-        this.mutex.lock();
-        try
-        {
-            while (!this.queue.isEmpty())
-            {
-                this.notFullCondition.await();
-            }
-        }
-        finally
-        {
-            this.mutex.unlock();
-        }
-	}
-
-	@Override
-	public void stopConsumers(int finalConsumerThreadsCount)
+	public void stopConsumers()
 	{
         this.mutex.lock();
         try

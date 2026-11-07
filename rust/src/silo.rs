@@ -3,24 +3,25 @@
 
 #![feature(mpmc_channel)]
 
-pub mod org;
+pub mod voidland;
 
-use org::voidland::concurrent::VERBOSE;
-use org::voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
-use org::voidland::concurrent::queue::MPMC_PortionQueue;
-use org::voidland::concurrent::queue::StdTextbookPortionQueue;
-use org::voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
-use org::voidland::concurrent::queue::SyncMpmcPortionQueue;
-use org::voidland::concurrent::turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
-use org::voidland::concurrent::turning_grille::Grille;
-use org::voidland::concurrent::turning_grille::TurningGrilleCracker;
-use org::voidland::concurrent::turning_grille::TurningGrilleCrackerImplDetails;
-use org::voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer;
-use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSyncless;
-use org::voidland::concurrent::turning_grille::TurningGrilleCrackerSerial;
+use voidland::concurrent::VERBOSE;
+use voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
+use voidland::concurrent::queue::MPMC_PortionQueue;
+use voidland::concurrent::queue::StdTextbookPortionQueue;
+use voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
+use voidland::concurrent::queue::SyncMpmcPortionQueue;
+use voidland::concurrent::turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
+use voidland::concurrent::turning_grille::Grille;
+use voidland::concurrent::turning_grille::TurningGrilleCracker;
+use voidland::concurrent::turning_grille::TurningGrilleCrackerImplDetails;
+use voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer;
+use voidland::concurrent::turning_grille::TurningGrilleCrackerSyncless;
+use voidland::concurrent::turning_grille::TurningGrilleCrackerSerial;
 
 use std::fs::read_to_string;
 use std::string::String;
+use std::str::Lines;
 use std::env;
 use std::thread::available_parallelism;
 use std::sync::atomic::AtomicBool;
@@ -65,7 +66,11 @@ fn heatCpu()
 
 fn main()
 {
-    let cipherText: String = read_to_string(CIPHER_TEXT_PATH).unwrap().lines().next().unwrap().to_string();
+    let cipherFileContent: String = read_to_string(CIPHER_TEXT_PATH).unwrap();
+    let mut cipherFileLines: Lines = cipherFileContent.lines();
+    let cipherText: String = cipherFileLines.next().unwrap().to_string();
+    let minDetectedWordCount: usize = cipherFileLines.next().unwrap().parse().unwrap();
+    
     let clearText: String = read_to_string(CLEAR_TEXT_PATH).unwrap().lines().next().unwrap().to_string();
     let clearText: String = clearText.to_uppercase();
     let clearText: String = NOT_CAPITAL_ENGLISH_LETTERS_RE.replace_all(&clearText, "").to_string();
@@ -101,7 +106,7 @@ fn main()
             let producerCount: usize = cpuCount;
             let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createAsynMPMC_BlownQueue(maxQueueSize));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createAsyncMPMC_BlownQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook" =>
@@ -145,7 +150,7 @@ fn main()
         }
     }
     
-    let cracker: Arc<TurningGrilleCracker> = Arc::new(TurningGrilleCracker::new(&cipherText, crackerImplDetails));
+    let cracker: Arc<TurningGrilleCracker> = Arc::new(TurningGrilleCracker::new(&cipherText, minDetectedWordCount, crackerImplDetails));
     if !*VERBOSE
     {
         heatCpu();

@@ -81,6 +81,7 @@ pub struct TurningGrilleCracker
     grilleCountSoFar: AtomicU64,
 
     cipherText: Vec<char>,
+    minDetectedWordCount: usize,
     wordsTrie: Arc<WordsTrie>,
     candidates: Mutex<Option<BTreeSet<String>>>,
     
@@ -90,10 +91,9 @@ pub struct TurningGrilleCracker
 impl TurningGrilleCracker
 {
     const WORDS_FILE_PATH: &'static str = "3000words.txt";
-    const MIN_DETECTED_WORD_COUNT: usize = 17;  // Determined by gut feeling.
     
     
-    pub fn new(cipherText: &str, implDetails: Box<dyn TurningGrilleCrackerImplDetails>) -> Self
+    pub fn new(cipherText: &str, minDetextedWordCount: usize, implDetails: Box<dyn TurningGrilleCrackerImplDetails>) -> Self
     {
         let cipherText: String = cipherText.to_uppercase();
         if NOT_CAPITAL_ENGLISH_LETTERS_RE.is_match(&cipherText)
@@ -121,6 +121,7 @@ impl TurningGrilleCracker
             grilleCount: grilleCount,
             grilleCountSoFar: AtomicU64::new(0),
             cipherText: cipherText,
+            minDetectedWordCount: minDetextedWordCount,
             wordsTrie: Arc::new(WordsTrie::new(TurningGrilleCracker::WORDS_FILE_PATH)),
             candidates: Mutex::new(None),
             implDetails: Arc::from(implDetails)
@@ -205,7 +206,7 @@ impl TurningGrilleCracker
     {
         let elapsedTime: Duration = milestoneEnd.duration_since(milestoneState.milestoneStart);
         let elapsedTimeNs:u128 = elapsedTime.as_nanos();
-        if elapsedTimeNs > 0
+        if elapsedTimeNs > 0  &&  grilleCountSoFar >= milestoneState.grilleCountAtMilestoneStart
         {
             let grilleCountForMilestone: u64 = grilleCountSoFar - milestoneState.grilleCountAtMilestoneStart;
             let grillesPerSecond: u64 = (grilleCountForMilestone as u128 * Duration::from_secs(1).as_nanos() / elapsedTimeNs) as u64;
@@ -242,7 +243,7 @@ impl TurningGrilleCracker
     fn findWordsAndReport(&self, candidate: &str)
     {
         let wordsFound: usize = self.wordsTrie.countWords(candidate);
-        if wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT
+        if wordsFound >= self.minDetectedWordCount
         {
             self.candidates.lock().unwrap().as_mut().unwrap().insert(candidate.to_string());
             if self.VERBOSE
@@ -318,11 +319,7 @@ impl TurningGrilleCrackerImplDetails for TurningGrilleCrackerProducerConsumer
             let _ = producerThread.join().unwrap();
         }
         
-        self.portionQueue.ensureAllPortionsAreRetrieved();
-        while cracker.grilleCountSoFar.load(Ordering::Acquire) < cracker.grilleCount // Ensures all work is done and no more consumers will be started or stopped.
-        {
-        }
-        self.portionQueue.stopConsumers(self.consumerCount.load(Ordering::Acquire) as usize);
+        self.portionQueue.stopConsumers();
 
         loop
         {

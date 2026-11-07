@@ -17,10 +17,7 @@ pub trait MPMC_PortionQueue<E> : Send + Sync
     fn addPortion(&self, portion: E);
     fn retrievePortion(&self) -> Option<E>;
     
-    // The following two methods must be called in succession after the producer threads are done adding portions.
-    // After that, the queue cannot be reused.
-    fn ensureAllPortionsAreRetrieved(&self);
-    fn stopConsumers(&self, finalConsumerCount: usize);
+    fn stopConsumers(&self);
     
     fn getSize(&self) -> usize;
     fn getMaxSize(&self) -> usize;

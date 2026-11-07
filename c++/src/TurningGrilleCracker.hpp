@@ -67,7 +67,6 @@ class TurningGrilleCracker
 
 private:
     inline static const std::string WORDS_FILE_PATH = "3000words.txt";
-    inline static const unsigned MIN_DETECTED_WORD_COUNT = 17;  // Determined by gut feeling.
 
 private:
     unsigned sideLength;
@@ -75,6 +74,7 @@ private:
     std::atomic<uint64_t> grilleCountSoFar;
 
     std::string cipherText;
+    unsigned minDetectedWordCount;
     WordsTrie wordsTrie;
     std::mutex candidatesMutex;
     std::set<std::string> candidates;
@@ -87,7 +87,7 @@ private:
     std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails;
 
 public:
-    TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails);
+    TurningGrilleCracker(const std::string& cipherText, unsigned minDetectedWordCount, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails);
     virtual ~TurningGrilleCracker();
 
     std::set<std::string> bruteForce();

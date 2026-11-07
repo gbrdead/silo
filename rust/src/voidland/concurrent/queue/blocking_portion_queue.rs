@@ -1,6 +1,9 @@
 use super::MPMC_PortionQueue;
 
 use std::collections::VecDeque;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 use std::sync::mpmc::sync_channel;
 use std::sync::mpmc::Sender;
 use std::sync::mpmc::Receiver;
@@ -79,17 +82,7 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for StdTextbookPortionQueue<E>
         portion
     }
     
-    fn ensureAllPortionsAreRetrieved(&self)
-    {
-        let mut selfUnsync = self.mutex.lock().unwrap();
-        
-        while !selfUnsync.queue.is_empty()
-        {
-            selfUnsync = self.notFullCondition.wait(selfUnsync).unwrap();
-        }
-    }
-    
-    fn stopConsumers(&self, _finalConsumerCount: usize)
+    fn stopConsumers(&self)
     {
         let mut selfUnsync = self.mutex.lock().unwrap();
 
@@ -175,17 +168,7 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for ParkingLotTextbookPortionQueue<E>
         portion
     }
     
-    fn ensureAllPortionsAreRetrieved(&self)
-    {
-        let mut selfUnsync = self.mutex.lock();
-        
-        while !selfUnsync.queue.is_empty()
-        {
-            self.notFullCondition.wait(&mut selfUnsync);
-        }
-    }
-    
-    fn stopConsumers(&self, _finalConsumerCount: usize)
+    fn stopConsumers(&self)
     {
         let mut selfUnsync = self.mutex.lock();
 
@@ -210,6 +193,8 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for ParkingLotTextbookPortionQueue<E>
 
 pub struct SyncMpmcPortionQueue<E>
 {
+    activeConsumerCount: AtomicUsize,
+    workDone: AtomicBool,
     maxSize: usize,
     sender: Sender<Option<E>>,
     receiver: Receiver<Option<E>>
@@ -222,6 +207,8 @@ impl<E> SyncMpmcPortionQueue<E>
         let (sender, receiver): (Sender<Option<E>>, Receiver<Option<E>>) = sync_channel::<Option<E>>(maxSize);
         Self
         {
+            activeConsumerCount: AtomicUsize::new(0),
+            workDone: AtomicBool::new(false),
             maxSize: maxSize,
             sender: sender,
             receiver: receiver
@@ -238,20 +225,31 @@ impl<E: Send + Sync> MPMC_PortionQueue<E> for SyncMpmcPortionQueue<E>
     
     fn retrievePortion(&self) -> Option<E>
     {
-        self.receiver.recv().unwrap()
+        self.activeConsumerCount.fetch_add(1, Ordering::Release);
+        let portion: Option<E> = match self.workDone.load(Ordering::Acquire)
+        {
+            false =>
+            {
+                self.receiver.recv().unwrap()
+            }
+            true => 
+            {
+                None
+            }
+        };
+        self.activeConsumerCount.fetch_sub(1, Ordering::Release);        
+        portion
     }
     
-    fn ensureAllPortionsAreRetrieved(&self)
+    fn stopConsumers(&self)
     {
-        while self.receiver.len() > 0
+        while !self.receiver.is_empty()
         {
             sleep(Duration::from_millis(1));
         }
-    }
-    
-    fn stopConsumers(&self, finalConsumerCount: usize)
-    {
-        for _i in 0..finalConsumerCount
+        self.workDone.store(true, Ordering::Release);
+        let activeConsumerCount: usize = self.activeConsumerCount.load(Ordering::Acquire);
+        for _i in 0..activeConsumerCount
         {
             let _ = self.sender.send(None);
         }

@@ -14,7 +14,6 @@ import org.voidland.concurrent.Silo;
 public class TurningGrilleCracker
 {
     private static final String WORDS_FILE_PATH = "3000words.txt";
-    private static final int MIN_DETECTED_WORD_COUNT = 17;	// Determined by gut feeling.
     
     public static final Pattern NOT_CAPITAL_ENGLISH_LETTERS_RE = Pattern.compile("[^A-Z]");
     
@@ -24,6 +23,7 @@ public class TurningGrilleCracker
     AtomicLong grilleCountSoFar;
     
     private char[] cipherText;
+    private int minDetectedWordAccount;
     private WordsTrie wordsTrie;
     private SortedSet<String> candidates;
     
@@ -35,10 +35,11 @@ public class TurningGrilleCracker
     private TurningGrilleCrackerImplDetails implDetails;
 
     
-    public TurningGrilleCracker(String cipherText, TurningGrilleCrackerImplDetails implDetails)
+    public TurningGrilleCracker(String cipherText, int minDetectedWordCount, TurningGrilleCrackerImplDetails implDetails)
     	throws IOException
     {
     	cipherText = cipherText.toUpperCase(Locale.ENGLISH);
+    	this.minDetectedWordAccount = minDetectedWordCount;
     	if (TurningGrilleCracker.NOT_CAPITAL_ENGLISH_LETTERS_RE.matcher(cipherText).matches())
     	{
     		throw new IllegalArgumentException("The ciphertext must contain only English letters.");
@@ -131,7 +132,7 @@ public class TurningGrilleCracker
     Long milestone(long milestoneEnd, long grilleCountSoFar, String milestoneDetailsStatus)
     {
         long elapsedTimeNs = milestoneEnd - this.milestoneStart;
-        if (elapsedTimeNs > 0)
+        if (elapsedTimeNs > 0  &&  grilleCountSoFar >= this.grilleCountAtMilestoneStart)
         {
             long grilleCountForMilestone = grilleCountSoFar - this.grilleCountAtMilestoneStart;
             long grillesPerSecond = grilleCountForMilestone * TimeUnit.SECONDS.toNanos(1) / elapsedTimeNs;
@@ -165,7 +166,7 @@ public class TurningGrilleCracker
     private void findWordsAndReport(CharSequence candidate)
     {
         int wordsFound = this.wordsTrie.countWords(candidate);
-        if (wordsFound >= TurningGrilleCracker.MIN_DETECTED_WORD_COUNT)
+        if (wordsFound >= this.minDetectedWordAccount)
         {
         	synchronized (this.candidates)
         	{

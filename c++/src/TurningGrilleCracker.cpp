@@ -36,9 +36,10 @@ std::string TurningGrilleCrackerImplDetails::milestonesSummary(TurningGrilleCrac
 }
 
 
-TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails) :
+TurningGrilleCracker::TurningGrilleCracker(const std::string& cipherText, unsigned minDetectedWordCount, std::unique_ptr<TurningGrilleCrackerImplDetails> implDetails) :
     grilleCountSoFar(0),
     cipherText(cipherText),
+	minDetectedWordCount(minDetectedWordCount),
     wordsTrie(TurningGrilleCracker::WORDS_FILE_PATH),
 	candidatesMutex(),
 	candidates(),
@@ -135,7 +136,7 @@ std::optional<uint64_t> TurningGrilleCracker::milestone(const std::chrono::stead
 {
 	std::chrono::steady_clock::duration elapsedTime = milestoneEnd - this->milestoneStart;
 	std::chrono::duration<int64_t, std::nano>::rep elapsedTimeNs = std::chrono::duration_cast<std::chrono::nanoseconds>(elapsedTime).count();
-	if (elapsedTimeNs > 0)
+	if (elapsedTimeNs > 0  &&  grilleCountSoFar >= this->grilleCountAtMilestoneStart)
 	{
 		uint64_t grilleCountForMilestone = grilleCountSoFar - this->grilleCountAtMilestoneStart;
 		uint64_t grillesPerSecond = grilleCountForMilestone * std::nano::den / elapsedTimeNs;
@@ -169,7 +170,7 @@ std::optional<uint64_t> TurningGrilleCracker::milestone(const std::chrono::stead
 void TurningGrilleCracker::findWordsAndReport(const std::string& candidate)
 {
     unsigned wordsFound = this->wordsTrie.countWords(candidate);
-    if (wordsFound >= TurningGrilleCracker::MIN_DETECTED_WORD_COUNT)
+    if (wordsFound >= this->minDetectedWordCount)
     {
     	{
     		std::lock_guard candidatesLock(this->candidatesMutex);
@@ -209,9 +210,7 @@ void TurningGrilleCrackerProducerConsumer::bruteForce(TurningGrilleCracker& crac
         producerThread.join();
     }
 
-    this->portionQueue->ensureAllPortionsAreRetrieved();
-    while (cracker.grilleCountSoFar.load(std::memory_order_acquire) < cracker.grilleCount);   // Ensures all work is done and no more consumers will be started or stopped.
-    this->portionQueue->stopConsumers(this->consumerCount.load(std::memory_order_acquire));
+    this->portionQueue->stopConsumers();
 
     std::thread consumerThread;
     while (this->consumerThreads.try_dequeue(consumerThread))

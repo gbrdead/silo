@@ -1,21 +1,25 @@
 package org.voidland.concurrent.queue;
 
 import java.util.Optional;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class BlockingPortionQueue<E> 
 	implements MPMC_PortionQueue<E>
 {
+	private AtomicInteger activeConsumerCount;
+	private volatile boolean workDone;
     private int maxSize;
 	private BlockingQueue<Optional<E>> queue;
 	
 	
-	public BlockingPortionQueue(int maxSize)
+	public BlockingPortionQueue(int maxSize, BlockingQueue<Optional<E>> blockingQueue)
 	{
 	    this.maxSize = maxSize;
-		this.queue = new ArrayBlockingQueue<>(this.maxSize);
+	    this.activeConsumerCount = new AtomicInteger(0);
+	    this.workDone = false;
+		this.queue = blockingQueue;
 	}
 	
 	@Override
@@ -34,14 +38,22 @@ public class BlockingPortionQueue<E>
 	public E retrievePortion()
 		throws InterruptedException
 	{
-        return this.queue.take().orElse(null);
+		this.activeConsumerCount.getAndIncrement();
+		E portion = null;
+		if (!this.workDone)
+		{
+			portion = this.queue.take().orElse(null);
+		}
+		this.activeConsumerCount.getAndDecrement();
+		return portion;
 	}
 	
-    @Override
-    public void ensureAllPortionsAreRetrieved()
-    {
-        while (!this.queue.isEmpty())
-        {
+	@Override
+    public void stopConsumers()
+    	throws InterruptedException
+	{
+		while (!this.queue.isEmpty())
+		{
             try
             {
                 Thread.sleep(1);
@@ -49,14 +61,10 @@ public class BlockingPortionQueue<E>
             catch (InterruptedException e)
             {
             }
-        }
-    }
-	
-	@Override
-    public void stopConsumers(int finalConsumerThreadsCount)
-    	throws InterruptedException
-	{
-	    for (int i = 0; i < finalConsumerThreadsCount; i++)
+		}
+		this.workDone = true;
+		int activeConsumerCount = this.activeConsumerCount.get();
+	    for (int i = 0; i < activeConsumerCount; i++)
 	    {
 	    	this.queue.put(Optional.empty());
 	    }
