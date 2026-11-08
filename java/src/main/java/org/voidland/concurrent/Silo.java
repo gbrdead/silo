@@ -111,6 +111,26 @@ public class Silo
                     crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
                     break;
                 }
+                case "transfer":
+                {
+                    int initialConsumerCount = cpuCount * 3;
+                    int producerCount = cpuCount;
+                    int maxQueueSize = initialConsumerCount * producerCount * 1000;
+                    
+                    MPMC_PortionQueue<Grille> portionQueue = BlownQueue.<Grille>createTransferBlownQueue(maxQueueSize);
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
+                    break;
+                }
+                case "jctools":
+                {
+                    int initialConsumerCount = cpuCount * 3;
+                    int producerCount = cpuCount;
+                    int maxQueueSize = initialConsumerCount * producerCount * 1000;
+                    
+                    MPMC_PortionQueue<Grille> portionQueue = BlownQueue.<Grille>createJcToolsBlownQueue(maxQueueSize);
+                    crackerImplDetails = new TurningGrilleCrackerProducerConsumer(initialConsumerCount, producerCount, portionQueue);
+                    break;
+                }
                 case "blocking_array":
                 {
                     int initialConsumerCount = cpuCount * 3;
