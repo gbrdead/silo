@@ -14,9 +14,9 @@ edition = "2024"
 
 [dependencies]
 regex = "1.13"
-concurrent-queue = "2.5"
 parking_lot = "0.13"
-crossbeam = "0.8"
+concurrent-queue = "2.5"
+blown_queue = { path = "../../blown_queue/rust" }
 
 [[bin]]
 name = "silo"

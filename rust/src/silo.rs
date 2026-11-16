@@ -3,21 +3,22 @@
 
 #![feature(mpmc_channel)]
 
-pub mod voidland;
+use blown_queue::BlownQueue;
+use blown_queue::MPMC_PortionQueue;
 
-use voidland::concurrent::VERBOSE;
-use voidland::concurrent::queue::MostlyNonBlockingPortionQueue;
-use voidland::concurrent::queue::MPMC_PortionQueue;
-use voidland::concurrent::queue::StdTextbookPortionQueue;
-use voidland::concurrent::queue::ParkingLotTextbookPortionQueue;
-use voidland::concurrent::queue::SyncMpmcPortionQueue;
-use voidland::concurrent::turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
-use voidland::concurrent::turning_grille::Grille;
-use voidland::concurrent::turning_grille::TurningGrilleCracker;
-use voidland::concurrent::turning_grille::TurningGrilleCrackerImplDetails;
-use voidland::concurrent::turning_grille::TurningGrilleCrackerProducerConsumer;
-use voidland::concurrent::turning_grille::TurningGrilleCrackerSyncless;
-use voidland::concurrent::turning_grille::TurningGrilleCrackerSerial;
+mod queue;
+mod turning_grille;
+
+use queue::StdTextbookPortionQueue;
+use queue::ParkingLotTextbookPortionQueue;
+use queue::SyncMpmcPortionQueue;
+use turning_grille::NOT_CAPITAL_ENGLISH_LETTERS_RE;
+use turning_grille::Grille;
+use turning_grille::TurningGrilleCracker;
+use turning_grille::TurningGrilleCrackerImplDetails;
+use turning_grille::TurningGrilleCrackerProducerConsumer;
+use turning_grille::TurningGrilleCrackerSyncless;
+use turning_grille::TurningGrilleCrackerSerial;
 
 use std::fs::read_to_string;
 use std::string::String;
@@ -27,6 +28,7 @@ use std::thread::available_parallelism;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::LazyLock;
 use std::thread;
 use std::thread::JoinHandle;
 use std::time;
@@ -35,6 +37,12 @@ use std::collections::BTreeSet;
 
 const CIPHER_TEXT_PATH: &str = "encrypted_msg.txt";
 const CLEAR_TEXT_PATH: &str = "decrypted_msg.txt";
+
+
+static VERBOSE: LazyLock<bool> = LazyLock::new(||
+{
+    env::var("VERBOSE").is_ok() && env::var("VERBOSE").unwrap().eq_ignore_ascii_case("true")
+});
 
 
 fn heatCpu()
@@ -97,7 +105,7 @@ fn main()
             let producerCount: usize = cpuCount;
             let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createConcurrentBlownQueue(maxQueueSize));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createConcurrentBlownQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "async_mpmc" =>
@@ -106,7 +114,7 @@ fn main()
             let producerCount: usize = cpuCount;
             let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(MostlyNonBlockingPortionQueue::createAsyncMPMC_BlownQueue(maxQueueSize));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createAsyncMPMC_BlownQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "textbook" =>

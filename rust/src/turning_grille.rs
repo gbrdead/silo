@@ -5,7 +5,7 @@ pub use grille::Grille;
 use grille::GrilleInterval;
 use words_trie::WordsTrie;
 use super::VERBOSE;
-use super::queue::MPMC_PortionQueue;
+use blown_queue::MPMC_PortionQueue;
 
 use std::vec::Vec;
 use std::collections::BTreeSet;

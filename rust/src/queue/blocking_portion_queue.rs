@@ -1,4 +1,4 @@
-use super::MPMC_PortionQueue;
+use blown_queue::MPMC_PortionQueue;
 
 use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;

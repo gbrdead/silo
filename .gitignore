@@ -1,11 +1,11 @@
 *~
 
 /cpu.def
-/c++/print_tables.py
-/java/print_tables.py
-/print_tables.py
-/rust/print_tables.py
 /stats.py
+/print_tables.py
+/c++/print_tables.py
+/rust/print_tables.py
+/java/print_tables.py
 measurements/
 
 .project
