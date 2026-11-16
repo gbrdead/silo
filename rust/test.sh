@@ -9,7 +9,7 @@ for MIN_MEASUREMENT_COUNT in $(seq 1 ${1})
 do
     for BACKEND in ${RUST_BACKENDS}
     do
-        for TEST in syncless concurrent async_mpmc serial textbook sync_mpmc textbook_pl
+        for TEST in syncless concurrent_bounded concurrent_unbounded crossbeam_array crossbeam_seg async_mpmc serial textbook sync_mpmc textbook_pl
         do
             TEST_RUN="${HOST}-${BACKEND}-${TEST}"
             LOG_FILE="measurements/${TEST_RUN}.log"

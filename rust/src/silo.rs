@@ -99,13 +99,40 @@ fn main()
     let cpuCount: usize = available_parallelism().unwrap().get();
     match arg
     {
-        "concurrent" =>
+        "concurrent_bounded" =>
         {
             let initialConsumerCount: usize = cpuCount * 3;
             let producerCount: usize = cpuCount;
             let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
 
-            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createConcurrentBlownQueue(maxQueueSize));
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createConcurrentBoundedBlownQueue(maxQueueSize));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
+        "concurrent_unbounded" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
+
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createConcurrentUnboundedBlownQueue(maxQueueSize));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
+        "crossbeam_array" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
+
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createCrossbeamArrayPortionQueue(maxQueueSize));
+            crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
+        }
+        "crossbeam_seg" =>
+        {
+            let initialConsumerCount: usize = cpuCount * 3;
+            let producerCount: usize = cpuCount;
+            let maxQueueSize: usize = initialConsumerCount * producerCount * 1000;
+
+            let portionQueue: Arc<dyn MPMC_PortionQueue<Grille>> = Arc::new(BlownQueue::createCrossbeamSegPortionQueue(maxQueueSize));
             crackerImplDetails = Box::new(TurningGrilleCrackerProducerConsumer::new(initialConsumerCount, producerCount, portionQueue));
         }
         "async_mpmc" =>
